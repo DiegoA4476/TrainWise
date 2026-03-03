@@ -71,7 +71,3 @@ TrainWise aims to merge gym discovery, workout tracking, and intelligent trainin
 - Enhanced computer vision accuracy  
 
 ---
-
-## License
-
-Specify your project license here (e.g., MIT, Apache 2.0, etc.).
