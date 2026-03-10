@@ -73,3 +73,6 @@ TrainWise aims to merge gym discovery, workout tracking, and intelligent trainin
 ---
 ## Journeymap
 ![Logo](docs/TrainWiseJourneyMap.png)
+
+## Mock ups
+https://www.figma.com/design/TkBniHpIlehZUjeF5QYdbO/Sin-t%C3%ADtulo?node-id=0-1&t=n3IWrRdyRSWgRWJa-1
