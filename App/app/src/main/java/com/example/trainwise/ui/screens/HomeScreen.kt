@@ -46,7 +46,7 @@ fun HomeScreen(
                 onProfileClick = onNavigateToProfile
             ) 
         },
-        containerColor = DarkBackground
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         Column(
             modifier = Modifier
@@ -77,9 +77,9 @@ fun HomeScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                StatCard(Modifier.weight(1f), Icons.Outlined.LocationOn, "5", "Gyms")
-                StatCard(Modifier.weight(1f), Icons.Outlined.Navigation, "0.5 km", "Nearest")
-                StatCard(Modifier.weight(1f), Icons.Outlined.Star, "4.7", "Average")
+                HomeStatCard(Modifier.weight(1f), Icons.Outlined.LocationOn, "5", "Gyms")
+                HomeStatCard(Modifier.weight(1f), Icons.Outlined.Navigation, "0.5 km", "Nearest")
+                HomeStatCard(Modifier.weight(1f), Icons.Outlined.Star, "4.7", "Average")
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -87,7 +87,7 @@ fun HomeScreen(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Outlined.LocationOn, null, tint = Orange)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Nearby Gyms", color = White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                Text("Nearby Gyms", color = MaterialTheme.colorScheme.onBackground, fontSize = 22.sp, fontWeight = FontWeight.Bold)
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -165,7 +165,7 @@ fun HomeBottomNavigationBar(
 }
 
 @Composable
-fun StatCard(modifier: Modifier, icon: ImageVector, value: String, label: String) {
+private fun HomeStatCard(modifier: Modifier, icon: ImageVector, value: String, label: String) {
     Card(
         modifier = modifier.height(100.dp),
         colors = CardDefaults.cardColors(containerColor = CardBackground),
@@ -177,7 +177,7 @@ fun StatCard(modifier: Modifier, icon: ImageVector, value: String, label: String
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Icon(icon, null, tint = Orange, modifier = Modifier.size(24.dp))
-            Text(text = value, color = White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Text(text = value, color = MaterialTheme.colorScheme.onBackground, fontSize = 18.sp, fontWeight = FontWeight.Bold)
             Text(text = label, color = GrayText, fontSize = 12.sp)
         }
     }
@@ -197,7 +197,7 @@ fun GymCard(gym: Gym) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text(text = gym.name, color = White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text(text = gym.name, color = MaterialTheme.colorScheme.onBackground, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Filled.Star, null, tint = Orange, modifier = Modifier.size(16.dp))
                         Text(text = " ${gym.rating}  •  ${gym.distance}", color = LightGray, fontSize = 14.sp)

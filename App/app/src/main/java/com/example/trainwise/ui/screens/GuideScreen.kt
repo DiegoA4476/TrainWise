@@ -76,7 +76,7 @@ fun GuideScreen(
                     if (inputText.isNotBlank()) {
                         chatMessages = chatMessages + Message(inputText, true)
                         inputText = ""
-                        // logic to call the ia (future implemnetation)
+                        // logic to call the ai (future implementation)
                     }
                 }
             )
@@ -98,7 +98,7 @@ fun ChatHeader() {
             Spacer(modifier = Modifier.width(12.dp))
             Column {
                 Text("AI Trainer", color = White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                Text("En línea para ayudarte", color = GrayText, fontSize = 12.sp)
+                Text("Online to help you", color = GrayText, fontSize = 12.sp)
             }
         }
     }
@@ -147,7 +147,7 @@ fun ChatInput(value: String, onValueChange: (String) -> Unit, onSendClick: () ->
             TextField(
                 value = value,
                 onValueChange = onValueChange,
-                placeholder = { Text("Pregunta por un entreno...", color = GrayText) },
+                placeholder = { Text("Ask for a workout...", color = GrayText) },
                 modifier = Modifier
                     .weight(1f)
                     .background(CardBackground, RoundedCornerShape(24.dp)),

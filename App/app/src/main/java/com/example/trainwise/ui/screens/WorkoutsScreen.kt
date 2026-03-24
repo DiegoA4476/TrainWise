@@ -43,7 +43,8 @@ data class Workout(
 fun WorkoutsScreen(
     onNavigateHome: () -> Unit,
     onNavigateGuide: () -> Unit,
-    onNavigateProfile: () -> Unit
+    onNavigateProfile: () -> Unit,
+    onNavigateToCreateWorkout: () -> Unit
 ) {
     val categories = listOf("All", "Strength", "Cardio", "Yoga", "HIIT")
     var selectedCategory by remember { mutableStateOf("All") }
@@ -73,7 +74,7 @@ fun WorkoutsScreen(
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { /* Create Workout */ },
+                onClick = onNavigateToCreateWorkout,
                 containerColor = Orange,
                 contentColor = White,
                 shape = CircleShape
