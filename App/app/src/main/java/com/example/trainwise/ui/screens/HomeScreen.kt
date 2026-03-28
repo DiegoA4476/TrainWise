@@ -288,7 +288,7 @@ fun GymCard(gym: Gym, onClick: () -> Unit) {
                                 fontSize = 12.sp,
                                 maxLines = 1
                             )
-                        }w
+                        }
                     }
                 }
                 if (gym.isOpenNow) {
