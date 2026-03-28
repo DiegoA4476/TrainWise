@@ -1,105 +1,189 @@
 package com.example.trainwise.ui.screens
 
-import androidx.compose.foundation.background
+import android.Manifest
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.trainwise.ui.theme.*
+import com.google.android.gms.maps.model.LatLng
+import com.example.trainwise.data.models.Gym
+import com.example.trainwise.ui.viwemodels.MapViewModel
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.rememberMultiplePermissionsState
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
+import com.google.android.gms.maps.model.BitmapDescriptorFactory
+import com.google.android.gms.maps.model.CameraPosition
+import com.google.maps.android.compose.*
 
-data class Gym(
-    val name: String,
-    val rating: Double,
-    val distance: String,
-    val tags: List<String>,
-    val price: Int
-)
-
+@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun HomeScreen(
+    viewModel: MapViewModel = viewModel(),
     onNavigateToWorkouts: () -> Unit,
     onNavigateToGuide: () -> Unit,
     onNavigateToProfile: () -> Unit
 ) {
-    val gyms = listOf(
-        Gym("FitZone Premium", 4.8, "0.5 km", listOf("CrossFit", "Yoga", "Spinning"), 850),
-        Gym("PowerGym Centro", 4.6, "1.2 km", listOf("Strength", "Functional", "Boxing"), 1200)
+    val context = LocalContext.current
+    val apiKey = "AIzaSyBL8O8dVwzdkqhNTT6kU3xQmKiGzVlyq-M"
+
+    val locationPermissionState = rememberMultiplePermissionsState(
+        permissions = listOf(
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION
+        )
     )
 
+    val cameraPositionState = rememberCameraPositionState {
+        position = CameraPosition.fromLatLngZoom(LatLng(0.0, 0.0), 15f)
+    }
+
+    LaunchedEffect(locationPermissionState.allPermissionsGranted) {
+        if (locationPermissionState.allPermissionsGranted) {
+            val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
+            try {
+                fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null)
+                    .addOnSuccessListener { location ->
+                        location?.let {
+                            val userLatLng = LatLng(it.latitude, it.longitude)
+                            viewModel.fetchNearbyGyms(userLatLng, apiKey)
+                            cameraPositionState.position = CameraPosition.fromLatLngZoom(userLatLng, 15f)
+                        } ?: run {
+                            fusedLocationClient.lastLocation.addOnSuccessListener { lastLoc ->
+                                lastLoc?.let {
+                                    val userLatLng = LatLng(it.latitude, it.longitude)
+                                    viewModel.fetchNearbyGyms(userLatLng, apiKey)
+                                    cameraPositionState.position = CameraPosition.fromLatLngZoom(userLatLng, 15f)
+                                }
+                            }
+                        }
+                    }
+            } catch (e: SecurityException) {
+
+            }
+        } else {
+            locationPermissionState.launchMultiplePermissionRequest()
+        }
+    }
+
     Scaffold(
-        bottomBar = { 
+        bottomBar = {
             HomeBottomNavigationBar(
                 onWorkoutsClick = onNavigateToWorkouts,
                 onGuideClick = onNavigateToGuide,
                 onProfileClick = onNavigateToProfile
-            ) 
+            )
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
-        Column(
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(horizontal = 20.dp)
         ) {
-            Spacer(modifier = Modifier.height(20.dp))
-            
-            // Map Placeholder
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(250.dp)
-                    .background(CardBackground, RoundedCornerShape(16.dp)),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Outlined.LocationOn, contentDescription = null, tint = Orange, modifier = Modifier.size(40.dp))
-                    Text("Map View Placeholder", color = White)
+            item {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(300.dp)
+                        .padding(16.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                ) {
+                    GoogleMap(
+                        modifier = Modifier.fillMaxSize(),
+                        cameraPositionState = cameraPositionState,
+                        properties = MapProperties(isMyLocationEnabled = locationPermissionState.allPermissionsGranted),
+                        uiSettings = MapUiSettings(myLocationButtonEnabled = true)
+                    ) {
+                        viewModel.gyms.forEach { gym ->
+                            Marker(
+                                state = MarkerState(position = gym.location),
+                                title = gym.name,
+                                snippet = "${gym.rating} ★",
+                                icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_ORANGE)
+                            )
+                        }
+                    }
+                    if (viewModel.isLoading) {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(color = Orange)
+                        }
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // Stats Row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                HomeStatCard(Modifier.weight(1f), Icons.Outlined.LocationOn, "5", "Gyms")
-                HomeStatCard(Modifier.weight(1f), Icons.Outlined.Navigation, "0.5 km", "Nearest")
-                HomeStatCard(Modifier.weight(1f), Icons.Outlined.Star, "4.7", "Average")
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Outlined.LocationOn, null, tint = Orange)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Nearby Gyms", color = MaterialTheme.colorScheme.onBackground, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                contentPadding = PaddingValues(bottom = 16.dp)
-            ) {
-                items(gyms) { gym ->
-                    GymCard(gym)
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "Gyms near  you",
+                        color = White,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    if (viewModel.isLoading) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = Orange)
+                    }
                 }
             }
+
+            if (viewModel.errorMessage != null) {
+                item {
+                    Text(
+                        text = viewModel.errorMessage!!,
+                        color = Color.Red,
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+                    )
+                }
+            }
+
+            if (!viewModel.isLoading && viewModel.gyms.isEmpty() && viewModel.errorMessage == null) {
+                item {
+                    Text(
+                        "No gyms found near you.",
+                        color = LightGray,
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)
+                    )
+                }
+            }
+
+            items(viewModel.gyms) { gym ->
+                Box(modifier = Modifier.padding(horizontal = 20.dp)) {
+                    GymCard(gym) {
+                        val gmmIntentUri = Uri.parse("geo:0,0?q=${gym.name} ${gym.address}")
+                        val mapIntent = Intent(Intent.ACTION_VIEW, gmmIntentUri)
+                        mapIntent.setPackage("com.google.android.apps.maps")
+                        context.startActivity(mapIntent)
+                    }
+                }
+            }
+
+            item { Spacer(modifier = Modifier.height(16.dp)) }
         }
     }
 }
@@ -165,28 +249,12 @@ fun HomeBottomNavigationBar(
 }
 
 @Composable
-private fun HomeStatCard(modifier: Modifier, icon: ImageVector, value: String, label: String) {
+fun GymCard(gym: Gym, onClick: () -> Unit) {
     Card(
-        modifier = modifier.height(100.dp),
-        colors = CardDefaults.cardColors(containerColor = CardBackground),
-        shape = RoundedCornerShape(16.dp)
-    ) {
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Icon(icon, null, tint = Orange, modifier = Modifier.size(24.dp))
-            Text(text = value, color = MaterialTheme.colorScheme.onBackground, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-            Text(text = label, color = GrayText, fontSize = 12.sp)
-        }
-    }
-}
-
-@Composable
-fun GymCard(gym: Gym) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp)
+            .clickable { onClick() },
         colors = CardDefaults.cardColors(containerColor = CardBackground),
         shape = RoundedCornerShape(16.dp)
     ) {
@@ -196,37 +264,41 @@ fun GymCard(gym: Gym) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
-                    Text(text = gym.name, color = MaterialTheme.colorScheme.onBackground, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Filled.Star, null, tint = Orange, modifier = Modifier.size(16.dp))
-                        Text(text = " ${gym.rating}  •  ${gym.distance}", color = LightGray, fontSize = 14.sp)
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                    Surface(
+                        color = Orange.copy(alpha = 0.2f),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.size(48.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(Icons.Default.FitnessCenter, null, tint = Orange)
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(text = gym.name, color = White, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Filled.Star, null, tint = Orange, modifier = Modifier.size(14.dp))
+                            val distanceText = if (gym.distance != null) {
+                                if (gym.distance < 1000) "${gym.distance.toInt()}m" else String.format("%.1fkm", gym.distance / 1000)
+                            } else ""
+                            Text(
+                                text = " ${gym.rating} • $distanceText",
+                                color = LightGray,
+                                fontSize = 12.sp,
+                                maxLines = 1
+                            )
+                        }w
                     }
                 }
-                Surface(
-                    color = Color(0xFF2C1C14),
-                    shape = RoundedCornerShape(4.dp)
-                ) {
-                    Text(
-                        text = "${gym.price}",
-                        color = Orange,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                        fontSize = 12.sp
-                    )
-                }
-            }
-            
-            Spacer(modifier = Modifier.height(12.dp))
-            
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                gym.tags.forEach { tag ->
+                if (gym.isOpenNow) {
                     Surface(
-                        color = SurfaceColor,
+                        color = Color(0xFF2C1C14),
                         shape = RoundedCornerShape(4.dp)
                     ) {
                         Text(
-                            text = tag,
-                            color = LightGray,
+                            text = "Open",
+                            color = Orange,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                             fontSize = 12.sp
                         )

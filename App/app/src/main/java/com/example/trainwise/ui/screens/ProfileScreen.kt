@@ -166,6 +166,32 @@ fun ProfileScreen(
 }
 
 @Composable
+fun StatCard(
+    modifier: Modifier = Modifier,
+    icon: ImageVector,
+    value: String,
+    label: String
+) {
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(containerColor = CardBackground),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(icon, null, tint = Orange, modifier = Modifier.size(24.dp))
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(text = value, color = White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Text(text = label, color = GrayText, fontSize = 12.sp)
+        }
+    }
+}
+
+@Composable
 fun ProfileMenuItem(
     icon: ImageVector,
     title: String,
@@ -233,24 +259,5 @@ fun ProfileBottomNavigationBar(
                 selectedTextColor = White
             )
         )
-    }
-}
-
-@Composable
-fun StatCard(modifier: Modifier, icon: ImageVector, value: String, label: String) {
-    Card(
-        modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = CardBackground),
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Icon(icon, null, tint = Orange, modifier = Modifier.size(20.dp))
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(value, color = MaterialTheme.colorScheme.onBackground, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-            Text(label, color = GrayText, fontSize = 12.sp)
-        }
     }
 }
