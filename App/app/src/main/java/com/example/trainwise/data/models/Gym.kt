@@ -9,5 +9,6 @@ data class Gym(
     val address: String,
     val location: LatLng,
     val isOpenNow: Boolean = true,
-    val distance: Float? = null
+    val distance: Float? = null,
+    val photoReference: String? = null
 )

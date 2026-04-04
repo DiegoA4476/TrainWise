@@ -1,8 +1,6 @@
 package com.example.trainwise.ui.screens
 
 import android.Manifest
-import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -34,7 +32,9 @@ import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.MapStyleOptions
 import com.google.maps.android.compose.*
+import com.example.trainwise.R
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
@@ -42,7 +42,8 @@ fun HomeScreen(
     viewModel: MapViewModel = viewModel(),
     onNavigateToWorkouts: () -> Unit,
     onNavigateToGuide: () -> Unit,
-    onNavigateToProfile: () -> Unit
+    onNavigateToProfile: () -> Unit,
+    onNavigateToGymDetails: () -> Unit
 ) {
     val context = LocalContext.current
     val apiKey = "AIzaSyBL8O8dVwzdkqhNTT6kU3xQmKiGzVlyq-M"
@@ -112,7 +113,10 @@ fun HomeScreen(
                     GoogleMap(
                         modifier = Modifier.fillMaxSize(),
                         cameraPositionState = cameraPositionState,
-                        properties = MapProperties(isMyLocationEnabled = locationPermissionState.allPermissionsGranted),
+                        properties = MapProperties(
+                            isMyLocationEnabled = locationPermissionState.allPermissionsGranted,
+                            mapStyleOptions = MapStyleOptions.loadRawResourceStyle(context, R.raw.map_style)
+                        ),
                         uiSettings = MapUiSettings(myLocationButtonEnabled = true)
                     ) {
                         viewModel.gyms.forEach { gym ->
@@ -120,7 +124,11 @@ fun HomeScreen(
                                 state = MarkerState(position = gym.location),
                                 title = gym.name,
                                 snippet = "${gym.rating} ★",
-                                icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_ORANGE)
+                                icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_ORANGE),
+                                onInfoWindowClick = {
+                                    viewModel.selectGym(gym)
+                                    onNavigateToGymDetails()
+                                }
                             )
                         }
                     }
@@ -141,7 +149,7 @@ fun HomeScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        "Gyms near  you",
+                        "Gyms near you",
                         color = White,
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold
@@ -175,10 +183,8 @@ fun HomeScreen(
             items(viewModel.gyms) { gym ->
                 Box(modifier = Modifier.padding(horizontal = 20.dp)) {
                     GymCard(gym) {
-                        val gmmIntentUri = Uri.parse("geo:0,0?q=${gym.name} ${gym.address}")
-                        val mapIntent = Intent(Intent.ACTION_VIEW, gmmIntentUri)
-                        mapIntent.setPackage("com.google.android.apps.maps")
-                        context.startActivity(mapIntent)
+                        viewModel.selectGym(gym)
+                        onNavigateToGymDetails()
                     }
                 }
             }

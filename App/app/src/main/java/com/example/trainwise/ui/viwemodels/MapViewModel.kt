@@ -17,6 +17,9 @@ class MapViewModel : ViewModel() {
     var userLocation by mutableStateOf<LatLng?>(null)
     var isLoading by mutableStateOf(false)
     var errorMessage by mutableStateOf<String?>(null)
+    
+    // For selected gym details
+    var selectedGym by mutableStateOf<Gym?>(null)
 
     private val retrofit = Retrofit.Builder()
         .baseUrl("https://maps.googleapis.com/")
@@ -24,6 +27,10 @@ class MapViewModel : ViewModel() {
         .build()
 
     private val apiService = retrofit.create(PlacesApiService::class.java)
+
+    fun selectGym(gym: Gym?) {
+        selectedGym = gym
+    }
 
     fun fetchNearbyGyms(latLng: LatLng, apiKey: String) {
         Log.d("MapViewModel", "Fetching gyms for: ${latLng.latitude}, ${latLng.longitude}")
@@ -51,7 +58,8 @@ class MapViewModel : ViewModel() {
                             rating = it.rating ?: 0.0,
                             address = it.vicinity,
                             location = LatLng(it.geometry.location.lat, it.geometry.location.lng),
-                            distance = distance
+                            distance = distance,
+                            photoReference = it.photos?.firstOrNull()?.photo_reference
                         )
                     }
                     gyms = fetchedGyms.sortedBy { it.distance }

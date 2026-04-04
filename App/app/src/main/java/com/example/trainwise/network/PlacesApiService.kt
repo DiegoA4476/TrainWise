@@ -25,7 +25,14 @@ data class PlaceResult(
     val name: String,
     val rating: Double?,
     val vicinity: String,
-    val geometry: Geometry
+    val geometry: Geometry,
+    val photos: List<Photo>?
+)
+
+data class Photo(
+    val photo_reference: String,
+    val height: Int,
+    val width: Int
 )
 
 data class Geometry(val location: LocationData)

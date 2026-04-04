@@ -5,22 +5,13 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.*
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.example.trainwise.ui.screens.HomeScreen
-import com.example.trainwise.ui.screens.LoginScreen
-import com.example.trainwise.ui.screens.SignUpScreen
-import com.example.trainwise.ui.screens.WorkoutsScreen
+import com.example.trainwise.ui.screens.*
 import com.example.trainwise.ui.theme.TrainWiseTheme
-import com.example.trainwise.ui.screens.ProfileScreen
-import com.example.trainwise.ui.screens.GuideScreen
-import com.example.trainwise.ui.screens.BiometricDevicesScreen
-import com.example.trainwise.ui.screens.SecurityScreen
-import com.example.trainwise.ui.screens.NotificationScreen
-import com.example.trainwise.ui.screens.AccountDetailsScreen
-import com.example.trainwise.ui.screens.TrainingHistoryScreen
-import com.example.trainwise.ui.screens.CreateWorkoutScreen
+import com.example.trainwise.ui.viwemodels.MapViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -28,11 +19,13 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             var isDarkMode by remember { mutableStateOf(true) }
+            val mapViewModel: MapViewModel = viewModel()
             
             TrainWiseTheme(darkTheme = isDarkMode) {
                 AppNavigation(
                     isDarkMode = isDarkMode,
-                    onToggleDarkMode = { isDarkMode = !isDarkMode }
+                    onToggleDarkMode = { isDarkMode = !isDarkMode },
+                    mapViewModel = mapViewModel
                 )
             }
         }
@@ -42,7 +35,8 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun AppNavigation(
     isDarkMode: Boolean,
-    onToggleDarkMode: () -> Unit
+    onToggleDarkMode: () -> Unit,
+    mapViewModel: MapViewModel
 ) {
     val navController = rememberNavController()
     NavHost(navController = navController, startDestination = "login") {
@@ -61,9 +55,11 @@ fun AppNavigation(
         }
         composable("home") {
             HomeScreen(
+                viewModel = mapViewModel,
                 onNavigateToWorkouts = { navController.navigate("workouts") },
                 onNavigateToGuide = { navController.navigate("guide") },
-                onNavigateToProfile = { navController.navigate("profile") }
+                onNavigateToProfile = { navController.navigate("profile") },
+                onNavigateToGymDetails = { navController.navigate("gym_details") }
             )
         }
         composable("workouts") {
@@ -124,6 +120,15 @@ fun AppNavigation(
             CreateWorkoutScreen(
                 onNavigateBack = { navController.popBackStack() }
             )
+        }
+        composable("gym_details") {
+            val selectedGym = mapViewModel.selectedGym
+            if (selectedGym != null) {
+                GymDetailsScreen(
+                    gym = selectedGym,
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
         }
     }
 }
