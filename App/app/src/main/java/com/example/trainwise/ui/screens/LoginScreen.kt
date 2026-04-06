@@ -23,10 +23,12 @@ import com.example.trainwise.ui.components.CustomTextField
 import com.example.trainwise.ui.theme.DarkBackground
 import com.example.trainwise.ui.theme.Orange
 import com.example.trainwise.ui.theme.White
+import com.google.firebase.auth.FirebaseAuth
 
 @Composable
 fun LoginScreen(onNavigateToSignUp: () -> Unit, onLoginSuccess: () -> Unit) {
-    var username by remember { mutableStateOf("") }
+    val auth = FirebaseAuth.getInstance()
+    var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var showError by remember { mutableStateOf(false) }
 
@@ -54,15 +56,15 @@ fun LoginScreen(onNavigateToSignUp: () -> Unit, onLoginSuccess: () -> Unit) {
 
         Spacer(modifier = Modifier.height(80.dp))
 
-        // Username Field
-        Text(text = "Username", color = White, fontSize = 18.sp, modifier = Modifier.padding(bottom = 8.dp))
+        // email Field
+        Text(text = "email", color = White, fontSize = 18.sp, modifier = Modifier.padding(bottom = 8.dp))
         CustomTextField(
-            value = username,
+            value = email,
             onValueChange = { 
-                username = it
+                email = it
                 showError = false
             },
-            placeholder = "Enter username",
+            placeholder = "Enter email",
             leadingIcon = {
                 Icon(
                     imageVector = Icons.Outlined.Person,
@@ -98,7 +100,7 @@ fun LoginScreen(onNavigateToSignUp: () -> Unit, onLoginSuccess: () -> Unit) {
 
         if (showError) {
             Text(
-                text = "Invalid username or password",
+                text = "Invalid email or password",
                 color = Color.Red,
                 fontSize = 14.sp,
                 modifier = Modifier.padding(top = 8.dp)
@@ -109,12 +111,15 @@ fun LoginScreen(onNavigateToSignUp: () -> Unit, onLoginSuccess: () -> Unit) {
 
         // Login Button
         Button(
-            onClick = { 
-                if (username == "123" && password == "123") {
-                    onLoginSuccess()
-                } else {
-                    showError = true
-                }
+            onClick = {
+                auth.signInWithEmailAndPassword(email, password)
+                    .addOnCompleteListener { task ->
+                        if (task.isSuccessful) {
+                            onLoginSuccess()
+                        } else {
+                            showError = true
+                        }
+                    }
             },
             modifier = Modifier.fillMaxWidth().height(70.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Orange),

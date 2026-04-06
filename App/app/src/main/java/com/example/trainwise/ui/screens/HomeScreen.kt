@@ -117,7 +117,9 @@ fun HomeScreen(
                             isMyLocationEnabled = locationPermissionState.allPermissionsGranted,
                             mapStyleOptions = MapStyleOptions.loadRawResourceStyle(context, R.raw.map_style)
                         ),
-                        uiSettings = MapUiSettings(myLocationButtonEnabled = true)
+                        uiSettings = MapUiSettings(myLocationButtonEnabled = true,
+                            scrollGesturesEnabled = false,
+                            zoomGesturesEnabled = true)
                     ) {
                         viewModel.gyms.forEach { gym ->
                             Marker(
