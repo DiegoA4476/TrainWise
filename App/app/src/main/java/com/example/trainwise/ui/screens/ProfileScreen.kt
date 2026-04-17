@@ -11,6 +11,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -20,6 +25,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.trainwise.ui.theme.*
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 
 @Composable
 fun ProfileScreen(
@@ -32,6 +39,25 @@ fun ProfileScreen(
     onNavigateToNotifications: () -> Unit,
     onNavigateToTrainingHistory: () -> Unit
 ) {
+    val auth = FirebaseAuth.getInstance()
+    val userId = auth.currentUser?.uid
+
+    var username by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    val db = FirebaseFirestore.getInstance()
+
+    LaunchedEffect(userId) {
+        userId?.let { id ->
+            db.collection("users").document(id).get()
+                .addOnSuccessListener { document ->
+                    if (document.exists()) {
+                        username = document.getString("username") ?: ""
+                        email = document.getString("email") ?: ""
+                    }
+                }
+        }
+    }
+
     Scaffold(
         bottomBar = {
             ProfileBottomNavigationBar(
@@ -83,8 +109,8 @@ fun ProfileScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                Text("Alex Trainer", color = MaterialTheme.colorScheme.onBackground, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                Text("alex.trainer@email.com", color = GrayText, fontSize = 14.sp)
+                Text(username, color = MaterialTheme.colorScheme.onBackground, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                Text(email, color = GrayText, fontSize = 14.sp)
 
                 Spacer(modifier = Modifier.height(30.dp))
 
