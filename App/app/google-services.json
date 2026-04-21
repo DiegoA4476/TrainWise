@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "491249014882",
+    "project_id": "trainwise-ua",
+    "storage_bucket": "trainwise-ua.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:491249014882:android:508a291357e83e81c8d93b",
+        "android_client_info": {
+          "package_name": "com.example.trainwise"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCZwO5wSjcPR_rT6HQNElyDODkFQLiCP94"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
