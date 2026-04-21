@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.trainwise.data.models.Gym
 import com.example.trainwise.ui.theme.*
+import com.example.trainwise.ui.config.ApiKeys
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,7 +38,7 @@ fun GymDetailsScreen(
 ) {
     val context = LocalContext.current
     val scrollState = rememberScrollState()
-    val apiKey = "AIzaSyBL8O8dVwzdkqhNTT6kU3xQmKiGzVlyq-M" // Consider moving this to a config file later
+    val apiKey = ApiKeys.GOOGLE_MAPS_KEY
 
     val photoUrl = if (gym.photoReference != null) {
         "https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photoreference=${gym.photoReference}&key=$apiKey"

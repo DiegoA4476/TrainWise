@@ -25,7 +25,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.trainwise.ui.theme.*
 import com.google.android.gms.maps.model.LatLng
 import com.example.trainwise.data.models.Gym
-import com.example.trainwise.ui.viwemodels.MapViewModel
+import com.example.trainwise.ui.viewmodels.MapViewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.google.android.gms.location.LocationServices
@@ -35,6 +35,7 @@ import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.MapStyleOptions
 import com.google.maps.android.compose.*
 import com.example.trainwise.R
+import com.example.trainwise.ui.config.ApiKeys
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
@@ -46,7 +47,7 @@ fun HomeScreen(
     onNavigateToGymDetails: () -> Unit
 ) {
     val context = LocalContext.current
-    val apiKey = "AIzaSyBL8O8dVwzdkqhNTT6kU3xQmKiGzVlyq-M"
+    val apiKey = ApiKeys.GOOGLE_MAPS_KEY
 
     val locationPermissionState = rememberMultiplePermissionsState(
         permissions = listOf(

@@ -29,13 +29,13 @@ import com.example.trainwise.ui.theme.White
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthWeakPasswordException
 import com.google.firebase.auth.userProfileChangeRequest
-import com.google.firebase.firestore.FirebaseFirestore // IMPORTANTE
+import com.google.firebase.firestore.FirebaseFirestore
 
 
 @Composable
 fun SignUpScreen(onNavigateToLogin: () -> Unit) {
     val auth = FirebaseAuth.getInstance()
-    val db = FirebaseFirestore.getInstance() // Instancia de la base de datos
+    val db = FirebaseFirestore.getInstance()
 
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }

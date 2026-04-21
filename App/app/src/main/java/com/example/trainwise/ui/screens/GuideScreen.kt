@@ -17,6 +17,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.trainwise.ui.theme.*
+import com.example.trainwise.ui.viewmodels.GuideViewModel
+
 
 data class Message(
     val content: String,
@@ -27,14 +29,11 @@ data class Message(
 fun GuideScreen(
     onNavigateToHome: () -> Unit,
     onNavigateToWorkouts: () -> Unit,
-    onNavigateToProfile: () -> Unit
+    onNavigateToProfile: () -> Unit,
+    viewModel: GuideViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 ) {
-    var chatMessages by remember {
-        mutableStateOf(listOf(
-            Message("Hey! I'm your TrainWise assistant. Are you looking for a workout routine today or would you prefer nutrition advice?", false)
-        ))
-    }
     var inputText by remember { mutableStateOf("") }
+    val chatMessages = viewModel.chatMessages
 
     Scaffold(
         bottomBar = {
@@ -74,9 +73,9 @@ fun GuideScreen(
                 onValueChange = { inputText = it },
                 onSendClick = {
                     if (inputText.isNotBlank()) {
-                        chatMessages = chatMessages + Message(inputText, true)
-                        inputText = ""
-                        // logic to call the ai (future implementation)
+                        val messageToSend = inputText
+                        inputText = "" // Limpiamos el campo inmediatamente
+                        viewModel.sendMessage(messageToSend) // Llamamos a la IA
                     }
                 }
             )

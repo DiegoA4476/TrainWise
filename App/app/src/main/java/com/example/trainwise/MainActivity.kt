@@ -11,7 +11,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.trainwise.ui.screens.*
 import com.example.trainwise.ui.theme.TrainWiseTheme
-import com.example.trainwise.ui.viwemodels.MapViewModel
+import com.example.trainwise.ui.viewmodels.MapViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

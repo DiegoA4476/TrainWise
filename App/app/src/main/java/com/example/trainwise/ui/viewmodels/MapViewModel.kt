@@ -1,4 +1,4 @@
-package com.example.trainwise.ui.viwemodels
+package com.example.trainwise.ui.viewmodels
 
 import android.location.Location
 import android.util.Log

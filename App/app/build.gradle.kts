@@ -85,4 +85,9 @@ dependencies {
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-firestore")
 
+    // SDK de Google AI para Gemini
+    implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
+    // Ensure you have the lifecycle ktx for viewModelScope
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0")
+
 }
