@@ -12,6 +12,13 @@ interface PlacesApiService {
         @Query("keyword") keyword: String? = "gym",
         @Query("key") apiKey: String
     ): PlacesResponse
+
+    @GET("maps/api/place/details/json")
+    suspend fun getPlaceDetails(
+        @Query("place_id") placeId: String,
+        @Query("fields") fields: String = "reviews",
+        @Query("key") apiKey: String
+    ): PlaceDetailsResponse
 }
 
 data class PlacesResponse(
@@ -37,3 +44,20 @@ data class Photo(
 
 data class Geometry(val location: LocationData)
 data class LocationData(val lat: Double, val lng: Double)
+
+data class PlaceDetailsResponse(
+    val result: PlaceDetailsResult,
+    val status: String
+)
+
+data class PlaceDetailsResult(
+    val reviews: List<GoogleReview>?
+)
+
+data class GoogleReview(
+    val author_name: String,
+    val rating: Int,
+    val text: String,
+    val relative_time_description: String,
+    val profile_photo_url: String?
+)

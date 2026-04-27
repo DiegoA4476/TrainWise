@@ -1,9 +1,12 @@
 package com.example.trainwise.ui.viewmodels
 
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.trainwise.ui.screens.Message
+import com.example.trainwise.data.models.Message
 import com.google.ai.client.generativeai.GenerativeModel
 import com.google.ai.client.generativeai.type.content
 import kotlinx.coroutines.launch
@@ -25,6 +28,9 @@ class GuideViewModel : ViewModel() {
 
     private val chatSession = generativeModel.startChat()
     val chatMessages = mutableStateListOf<Message>()
+    var isLoading by mutableStateOf(false)
+        private set
+        
     private var userData: UserProfile? = null
 
     init {
@@ -45,6 +51,7 @@ class GuideViewModel : ViewModel() {
 
     fun sendMessage(userText: String) {
         chatMessages.add(Message(userText, true))
+        isLoading = true
 
         viewModelScope.launch {
             try {
@@ -65,6 +72,8 @@ class GuideViewModel : ViewModel() {
                 android.util.Log.e("GEMINI_ERROR", "Details: ${e.message}", e)
 
                 chatMessages.add(Message("Error: ${e.localizedMessage}", false))
+            } finally {
+                isLoading = false
             }
         }
     }

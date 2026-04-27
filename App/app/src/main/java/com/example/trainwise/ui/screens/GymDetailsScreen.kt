@@ -2,6 +2,7 @@ package com.example.trainwise.ui.screens
 
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -14,6 +15,7 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -27,18 +29,27 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.trainwise.data.models.Gym
+import com.example.trainwise.data.models.Review
 import com.example.trainwise.ui.theme.*
 import com.example.trainwise.ui.config.ApiKeys
+import com.example.trainwise.ui.viewmodels.MapViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GymDetailsScreen(
     gym: Gym,
+    viewModel: MapViewModel,
     onNavigateBack: () -> Unit
 ) {
     val context = LocalContext.current
     val scrollState = rememberScrollState()
     val apiKey = ApiKeys.GOOGLE_MAPS_KEY
+
+    LaunchedEffect(gym.id) {
+        if (gym.reviews.isEmpty()) {
+            viewModel.fetchGymDetails(gym.id, apiKey)
+        }
+    }
 
     val photoUrl = if (gym.photoReference != null) {
         "https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photoreference=${gym.photoReference}&key=$apiKey"
@@ -64,7 +75,7 @@ fun GymDetailsScreen(
                 .padding(padding)
                 .verticalScroll(scrollState)
         ) {
-            // Gym Image from Google Places
+            // Gym Image
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -97,7 +108,6 @@ fun GymDetailsScreen(
                     }
                 }
                 
-                // Bottom Gradient for better text readability if needed
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -154,6 +164,28 @@ fun GymDetailsScreen(
                     }
                 }
 
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Reviews Section
+                Text(
+                    "Reviews",
+                    color = White,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+
+                if (gym.reviews.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxWidth().padding(vertical = 20.dp), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = Orange)
+                    }
+                } else {
+                    gym.reviews.forEach { review ->
+                        ReviewItem(review)
+                        Spacer(modifier = Modifier.height(12.dp))
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(32.dp))
 
                 // Action Buttons
@@ -176,9 +208,9 @@ fun GymDetailsScreen(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 OutlinedButton(
-                    onClick = { /* Call gym logic */ },
+                    onClick = { /* Contact gym logic */ },
                     modifier = Modifier.fillMaxWidth().height(56.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Orange),
+                    border = BorderStroke(1.dp, Orange),
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = Orange)
                 ) {
@@ -189,6 +221,66 @@ fun GymDetailsScreen(
                 
                 Spacer(modifier = Modifier.height(40.dp))
             }
+        }
+    }
+}
+
+@Composable
+fun ReviewItem(review: Review) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = CardBackground),
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.dp, White.copy(alpha = 0.05f))
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (review.profilePhotoUrl != null) {
+                        AsyncImage(
+                            model = review.profilePhotoUrl,
+                            contentDescription = review.authorName,
+                            modifier = Modifier.size(32.dp).clip(CircleShape)
+                        )
+                    } else {
+                        Surface(
+                            modifier = Modifier.size(32.dp),
+                            shape = CircleShape,
+                            color = Orange.copy(alpha = 0.2f)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(review.authorName.take(1), color = Orange, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(review.authorName, color = White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                        Text(review.timeAgo, color = GrayText, fontSize = 11.sp)
+                    }
+                }
+                Row {
+                    repeat(5) { index ->
+                        Icon(
+                            imageVector = Icons.Filled.Star,
+                            contentDescription = null,
+                            tint = if (index < review.rating) Orange else GrayText.copy(alpha = 0.3f),
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = review.text,
+                color = GrayText,
+                fontSize = 13.sp,
+                lineHeight = 18.sp
+            )
         }
     }
 }

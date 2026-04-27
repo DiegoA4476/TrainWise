@@ -126,6 +126,7 @@ fun AppNavigation(
             if (selectedGym != null) {
                 GymDetailsScreen(
                     gym = selectedGym,
+                    viewModel = mapViewModel,
                     onNavigateBack = { navController.popBackStack() }
                 )
             }

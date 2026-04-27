@@ -11,6 +11,7 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import com.example.trainwise.network.PlacesApiService
 import com.example.trainwise.data.models.Gym
+import com.example.trainwise.data.models.Review
 
 class MapViewModel : ViewModel() {
     var gyms by mutableStateOf<List<Gym>>(emptyList())
@@ -77,6 +78,35 @@ class MapViewModel : ViewModel() {
                 errorMessage = "Error in the net: ${e.localizedMessage}"
             } finally {
                 isLoading = false
+            }
+        }
+    }
+
+    fun fetchGymDetails(placeId: String, apiKey: String) {
+        viewModelScope.launch {
+            try {
+                val response = apiService.getPlaceDetails(placeId, apiKey = apiKey)
+                if (response.status == "OK") {
+                    val googleReviews = response.result.reviews ?: emptyList()
+                    val mappedReviews = googleReviews.map {
+                        Review(
+                            authorName = it.author_name,
+                            rating = it.rating,
+                            text = it.text,
+                            timeAgo = it.relative_time_description,
+                            profilePhotoUrl = it.profile_photo_url
+                        )
+                    }
+                    
+                    selectedGym = selectedGym?.copy(reviews = mappedReviews)
+                    
+                    // Also update the gym in the list if present
+                    gyms = gyms.map {
+                        if (it.id == placeId) it.copy(reviews = mappedReviews) else it
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("MapViewModel", "Error fetching place details", e)
             }
         }
     }
