@@ -1,7 +1,7 @@
 package com.example.trainwise.ui.config
 
 object AiConfig {
-    const val GEMINI_API_KEY = "AIzaSyCuDwx9s"
+    const val GEMINI_API_KEY = ""
     const val MODEL_NAME = "gemini-3-flash-preview"
 
     val SYSTEM_INSTRUCTIONS = """
