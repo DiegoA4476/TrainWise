@@ -1,7 +1,6 @@
 package com.example.trainwise.ui.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -29,49 +28,36 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.trainwise.ui.theme.*
+import com.example.trainwise.data.models.Workout
+import com.example.trainwise.ui.viewmodels.WorkoutViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 
-data class Workout(
-    val title: String,
-    val exercises: Int,
-    val duration: Int,
-    val difficulty: String,
-    val category: String,
-    val progress: Float = 0f
-)
+
+
 
 @Composable
 fun WorkoutsScreen(
     onNavigateHome: () -> Unit,
     onNavigateGuide: () -> Unit,
     onNavigateProfile: () -> Unit,
-    onNavigateToCreateWorkout: () -> Unit
+    onNavigateToCreateWorkout: () -> Unit,
+    viewModel: WorkoutViewModel = viewModel()
 ) {
-    val categories = listOf("All", "Strength", "Cardio", "Yoga", "HIIT")
+    val categories = listOf("All", "Strength", "Cardio", "Yoga", "HIIT", "Flexibility")
     var selectedCategory by remember { mutableStateOf("All") }
 
-    val allWorkouts = listOf(
-        Workout("Morning Full Body", 12, 45, "Intermediate", "Strength", 0.6f),
-        Workout("Upper Body Power", 8, 30, "Advanced", "Strength"),
-        Workout("Quick HIIT Blast", 6, 15, "Beginner", "HIIT", 0.2f),
-        Workout("Core Stability", 10, 20, "Intermediate", "Yoga"),
-        Workout("Evening Run Prep", 5, 10, "Beginner", "Cardio")
-    )
+    // Obtenemos los datos reales
+    val workouts by viewModel.workouts
+    val isLoading by viewModel.isLoading
 
     val filteredWorkouts = if (selectedCategory == "All") {
-        allWorkouts
+        workouts
     } else {
-        allWorkouts.filter { it.category == selectedCategory }
+        workouts.filter { it.category == selectedCategory }
     }
 
     Scaffold(
         topBar = { WorkoutsTopBar() },
-        bottomBar = {
-            WorkoutsBottomNavigationBar(
-                onHomeClick = onNavigateHome,
-                onGuideClick = onNavigateGuide,
-                onProfileClick = onNavigateProfile
-            )
-        },
         floatingActionButton = {
             FloatingActionButton(
                 onClick = onNavigateToCreateWorkout,
@@ -82,58 +68,63 @@ fun WorkoutsScreen(
                 Icon(Icons.Default.Add, contentDescription = "Add Workout")
             }
         },
+        bottomBar = {
+            WorkoutsBottomNavigationBar(
+                onHomeClick = onNavigateHome,
+                onGuideClick = onNavigateGuide,
+                onProfileClick = onNavigateProfile
+            )
+        },
         containerColor = DarkBackground
     ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding),
-            contentPadding = PaddingValues(bottom = 80.dp)
-        ) {
-            // Category Selector
-            item {
-                LazyRow(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 16.dp),
-                    contentPadding = PaddingValues(horizontal = 24.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(categories) { category ->
-                        CategoryChip(
-                            category = category,
-                            isSelected = selectedCategory == category,
-                            onSelect = { selectedCategory = category }
+        if (isLoading) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = Orange)
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize().padding(padding),
+                contentPadding = PaddingValues(bottom = 80.dp)
+            ) {
+                // Selector de Categorías
+                item {
+                    LazyRow(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+                        contentPadding = PaddingValues(horizontal = 24.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(categories) { category ->
+                            CategoryChip(
+                                category = category,
+                                isSelected = selectedCategory == category,
+                                onSelect = { selectedCategory = category }
+                            )
+                        }
+                    }
+                }
+
+                if (workouts.isEmpty()) {
+                    item {
+                        EmptyStateView(onNavigateToCreateWorkout)
+                    }
+                } else {
+                    item {
+                        Text(
+                            text = if (selectedCategory == "All") "My Routines" else "$selectedCategory Plan",
+                            color = White,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)
+                        )
+                    }
+
+                    items(filteredWorkouts) { workout ->
+                        WorkoutListItem(
+                            workout = workout,
+                            modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
                         )
                     }
                 }
-            }
-
-            // Featured Workout Card
-            item {
-                FeaturedWorkoutCard(
-                    workout = allWorkouts[0],
-                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
-                )
-            }
-
-            // Section Title
-            item {
-                Text(
-                    text = "Browse $selectedCategory",
-                    color = White,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)
-                )
-            }
-
-            // Workout List
-            items(filteredWorkouts) { workout ->
-                WorkoutListItem(
-                    workout = workout,
-                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
-                )
             }
         }
     }
@@ -187,70 +178,12 @@ fun CategoryChip(
     }
 }
 
-@Composable
-fun FeaturedWorkoutCard(workout: Workout, modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(180.dp)
-            .clip(RoundedCornerShape(24.dp))
-            .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(Orange, Orange.copy(alpha = 0.7f))
-                )
-            )
-            .clickable { /* Start Workout */ }
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(24.dp),
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Surface(
-                    color = White.copy(alpha = 0.2f),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text(
-                        "Featured",
-                        color = White,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-                Icon(Icons.Outlined.Timer, null, tint = White, modifier = Modifier.size(24.dp))
-            }
 
-            Column {
-                Text(
-                    text = workout.title,
-                    color = White,
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.ExtraBold
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "${workout.exercises} Exercises • ${workout.duration} min • ${workout.difficulty}",
-                    color = White.copy(alpha = 0.9f),
-                    fontSize = 14.sp
-                )
-            }
-        }
-    }
-}
 
 @Composable
 fun WorkoutListItem(workout: Workout, modifier: Modifier = Modifier) {
     Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable { /* Workout details */ },
+        modifier = modifier.fillMaxWidth(),
         color = CardBackground,
         shape = RoundedCornerShape(20.dp)
     ) {
@@ -258,51 +191,41 @@ fun WorkoutListItem(workout: Workout, modifier: Modifier = Modifier) {
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Icon/Image Placeholder
             Box(
-                modifier = Modifier
-                    .size(60.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(SurfaceColor),
+                modifier = Modifier.size(50.dp).clip(RoundedCornerShape(12.dp)).background(SurfaceColor),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Outlined.FitnessCenter,
-                    contentDescription = null,
-                    tint = Orange,
-                    modifier = Modifier.size(28.dp)
-                )
+                Icon(Icons.Outlined.FitnessCenter, null, tint = Orange, modifier = Modifier.size(24.dp))
             }
 
             Spacer(modifier = Modifier.width(16.dp))
 
-            Column(modifier = Modifier.weight(1f)) {
+            Column {
                 Text(
                     text = workout.title,
                     color = White,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold
                 )
-                Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "${workout.duration} min • ${workout.difficulty}",
+                    text = "${workout.exercises.size} Exercises • ${workout.category}",
                     color = GrayText,
                     fontSize = 13.sp
                 )
-                
-                if (workout.progress > 0) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    LinearProgressIndicator(
-                        progress = { workout.progress },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(4.dp)
-                            .clip(CircleShape),
-                        color = Orange,
-                        trackColor = SurfaceColor,
-                    )
-                }
             }
+        }
+    }
+}
+
+@Composable
+fun EmptyStateView(onAction: () -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(40.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text("No workouts yet", color = GrayText, fontSize = 16.sp)
+        TextButton(onClick = onAction) {
+            Text("Create your first one", color = Orange)
         }
     }
 }

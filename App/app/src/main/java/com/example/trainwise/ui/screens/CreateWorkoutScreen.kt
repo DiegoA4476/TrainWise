@@ -24,24 +24,26 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.trainwise.ui.theme.*
-
-data class Exercise(
-    val id: Int,
-    val name: String,
-    val muscleGroup: String
-)
-
-data class SelectedExercise(
-    val exercise: Exercise,
-    val reps: Int = 10,
-    val sets: Int = 3
-)
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+import com.example.trainwise.data.models.Exercise
+import com.example.trainwise.data.models.SelectedExercise
+import com.example.trainwise.data.models.Workout
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateWorkoutScreen(
     onNavigateBack: () -> Unit
 ) {
+
+    val db = FirebaseFirestore.getInstance()
+    val auth = FirebaseAuth.getInstance()
+    val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+
     val allExercises = listOf(
         Exercise(1, "Bench Press", "Chest"),
         Exercise(2, "Push Ups", "Chest"),
@@ -66,12 +68,62 @@ fun CreateWorkoutScreen(
     var workoutName by remember { mutableStateOf("") }
     var selectedExercises by remember { mutableStateOf(listOf<SelectedExercise>()) }
 
-    val filteredExercises = allExercises.filter { 
+
+
+    val saveWorkout = {
+        val currentUser = auth.currentUser
+        if (currentUser != null && workoutName.isNotBlank() && selectedExercises.isNotEmpty()) {
+            val workoutId = db.collection("workouts").document().id // Generate unique ID
+
+            val newWorkout = Workout(
+                id = workoutId,
+                userId = currentUser.uid,
+                title = workoutName,
+                category = selectedTrainingType,
+                exercises = selectedExercises,
+            )
+
+            db.collection("workouts").document(workoutId)
+                .set(newWorkout)
+                .addOnSuccessListener {
+                    scope.launch {
+
+                        snackbarHostState.showSnackbar(
+                            message = "Workout '$workoutName' saved successfully! ",
+                            duration = SnackbarDuration.Short
+                        )
+                        delay(10)
+                        onNavigateBack()
+                    }
+                }
+                .addOnFailureListener { e ->
+                    scope.launch {
+                        snackbarHostState.showSnackbar(
+                            message = "Error: ${e.message ?: "Could not save workout"}",
+                            duration = SnackbarDuration.Short
+                        )
+                    }
+                }
+        }
+    }
+
+    val filteredExercises = allExercises.filter {
         (selectedMuscleGroup == "All" || it.muscleGroup == selectedMuscleGroup) &&
-        it.name.contains(searchQuery, ignoreCase = true)
+                it.name.contains(searchQuery, ignoreCase = true)
     }
 
     Scaffold(
+        snackbarHost = {
+            SnackbarHost(hostState = snackbarHostState) { data ->
+                Snackbar(
+                    snackbarData = data,
+                    containerColor = CardBackground,
+                    contentColor = White,
+                    actionColor = Orange,
+                    shape = RoundedCornerShape(12.dp)
+                )
+            }
+        },
         topBar = {
             TopAppBar(
                 title = { Text("Create Workout", color = White, fontWeight = FontWeight.Bold) },
@@ -81,8 +133,15 @@ fun CreateWorkoutScreen(
                     }
                 },
                 actions = {
-                    TextButton(onClick = onNavigateBack) {
-                        Text("Save", color = Orange, fontWeight = FontWeight.Bold)
+                    TextButton(
+                        onClick = { saveWorkout() },
+                        enabled = workoutName.isNotBlank() && selectedExercises.isNotEmpty() // Validation
+                    ) {
+                        Text(
+                            "Save",
+                            color = if (workoutName.isNotBlank() && selectedExercises.isNotEmpty()) Orange else GrayText,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = DarkBackground)
