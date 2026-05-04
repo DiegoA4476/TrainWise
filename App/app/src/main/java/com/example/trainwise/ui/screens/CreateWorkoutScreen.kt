@@ -160,7 +160,7 @@ fun CreateWorkoutScreen(
                 verticalArrangement = Arrangement.spacedBy(20.dp),
                 contentPadding = PaddingValues(bottom = 20.dp)
             ) {
-                // Section: Workout Info
+
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                         Spacer(modifier = Modifier.height(8.dp))

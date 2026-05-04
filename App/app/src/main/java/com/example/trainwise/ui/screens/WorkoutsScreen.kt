@@ -31,6 +31,8 @@ import com.example.trainwise.ui.theme.*
 import com.example.trainwise.data.models.Workout
 import com.example.trainwise.ui.viewmodels.WorkoutViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.material.icons.filled.Delete
+
 
 
 
@@ -46,9 +48,10 @@ fun WorkoutsScreen(
     val categories = listOf("All", "Strength", "Cardio", "Yoga", "HIIT", "Flexibility")
     var selectedCategory by remember { mutableStateOf("All") }
 
-    // Obtenemos los datos reales
     val workouts by viewModel.workouts
     val isLoading by viewModel.isLoading
+    val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
 
     val filteredWorkouts = if (selectedCategory == "All") {
         workouts
@@ -57,6 +60,16 @@ fun WorkoutsScreen(
     }
 
     Scaffold(
+        snackbarHost = {
+            SnackbarHost(hostState = snackbarHostState) { data ->
+                Snackbar(
+                    snackbarData = data,
+                    containerColor = CardBackground,
+                    contentColor = White,
+                    actionColor = Orange
+                )
+            }
+        },
         topBar = { WorkoutsTopBar() },
         floatingActionButton = {
             FloatingActionButton(
@@ -86,6 +99,8 @@ fun WorkoutsScreen(
                 modifier = Modifier.fillMaxSize().padding(padding),
                 contentPadding = PaddingValues(bottom = 80.dp)
             ) {
+
+
                 // Selector de Categorías
                 item {
                     LazyRow(
@@ -121,6 +136,9 @@ fun WorkoutsScreen(
                     items(filteredWorkouts) { workout ->
                         WorkoutListItem(
                             workout = workout,
+                            onDelete = {
+                                viewModel.deleteWorkout(workout.id)
+                            },
                             modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
                         )
                     }
@@ -181,7 +199,11 @@ fun CategoryChip(
 
 
 @Composable
-fun WorkoutListItem(workout: Workout, modifier: Modifier = Modifier) {
+fun WorkoutListItem(
+    workout: Workout,
+    onDelete: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     Surface(
         modifier = modifier.fillMaxWidth(),
         color = CardBackground,
@@ -189,28 +211,41 @@ fun WorkoutListItem(workout: Workout, modifier: Modifier = Modifier) {
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Box(
-                modifier = Modifier.size(50.dp).clip(RoundedCornerShape(12.dp)).background(SurfaceColor),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(Icons.Outlined.FitnessCenter, null, tint = Orange, modifier = Modifier.size(24.dp))
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                Box(
+                    modifier = Modifier.size(50.dp).clip(RoundedCornerShape(12.dp)).background(SurfaceColor),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Outlined.FitnessCenter, null, tint = Orange, modifier = Modifier.size(24.dp))
+                }
+
+                Spacer(modifier = Modifier.width(16.dp))
+
+                Column {
+                    Text(
+                        text = workout.title,
+                        color = White,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "${workout.exercises.size} Exercises • ${workout.category}",
+                        color = GrayText,
+                        fontSize = 13.sp
+                    )
+                }
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
-
-            Column {
-                Text(
-                    text = workout.title,
-                    color = White,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "${workout.exercises.size} Exercises • ${workout.category}",
-                    color = GrayText,
-                    fontSize = 13.sp
+            // Botón de Eliminar
+            IconButton(onClick = onDelete) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "Delete Workout",
+                    tint = Color.Red.copy(alpha = 0.7f),
+                    modifier = Modifier.size(22.dp)
                 )
             }
         }

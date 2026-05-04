@@ -41,4 +41,17 @@ class WorkoutViewModel : ViewModel() {
             }
     }
 
+    fun deleteWorkout(workoutId: String) {
+        if (workoutId.isEmpty()) return
+
+        db.collection("workouts").document(workoutId)
+            .delete()
+            .addOnSuccessListener {
+                println("Workout deleted successfully")
+            }
+            .addOnFailureListener { e ->
+                println("Error deleting workout: ${e.message}")
+            }
+    }
+
 }
