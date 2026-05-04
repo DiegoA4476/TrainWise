@@ -16,13 +16,11 @@ import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -33,16 +31,13 @@ import com.example.trainwise.ui.viewmodels.WorkoutViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.material.icons.filled.Delete
 
-
-
-
-
 @Composable
 fun WorkoutsScreen(
     onNavigateHome: () -> Unit,
     onNavigateGuide: () -> Unit,
     onNavigateProfile: () -> Unit,
     onNavigateToCreateWorkout: () -> Unit,
+    onNavigateToActiveWorkout: (String) -> Unit,
     viewModel: WorkoutViewModel = viewModel()
 ) {
     val categories = listOf("All", "Strength", "Cardio", "Yoga", "HIIT", "Flexibility")
@@ -50,8 +45,6 @@ fun WorkoutsScreen(
 
     val workouts by viewModel.workouts
     val isLoading by viewModel.isLoading
-    val scope = rememberCoroutineScope()
-    val snackbarHostState = remember { SnackbarHostState() }
 
     val filteredWorkouts = if (selectedCategory == "All") {
         workouts
@@ -60,16 +53,6 @@ fun WorkoutsScreen(
     }
 
     Scaffold(
-        snackbarHost = {
-            SnackbarHost(hostState = snackbarHostState) { data ->
-                Snackbar(
-                    snackbarData = data,
-                    containerColor = CardBackground,
-                    contentColor = White,
-                    actionColor = Orange
-                )
-            }
-        },
         topBar = { WorkoutsTopBar() },
         floatingActionButton = {
             FloatingActionButton(
@@ -99,8 +82,6 @@ fun WorkoutsScreen(
                 modifier = Modifier.fillMaxSize().padding(padding),
                 contentPadding = PaddingValues(bottom = 80.dp)
             ) {
-
-
                 // Selector de Categorías
                 item {
                     LazyRow(
@@ -138,6 +119,9 @@ fun WorkoutsScreen(
                             workout = workout,
                             onDelete = {
                                 viewModel.deleteWorkout(workout.id)
+                            },
+                            onClick = {
+                                onNavigateToActiveWorkout(workout.id)
                             },
                             modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
                         )
@@ -196,16 +180,17 @@ fun CategoryChip(
     }
 }
 
-
-
 @Composable
 fun WorkoutListItem(
     workout: Workout,
     onDelete: () -> Unit,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Surface(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
         color = CardBackground,
         shape = RoundedCornerShape(20.dp)
     ) {

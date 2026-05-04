@@ -6,9 +6,11 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.*
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.example.trainwise.ui.screens.*
 import com.example.trainwise.ui.theme.TrainWiseTheme
 import com.example.trainwise.ui.viewmodels.MapViewModel
@@ -67,7 +69,10 @@ fun AppNavigation(
                 onNavigateHome = { navController.navigate("home") },
                 onNavigateGuide = {  navController.navigate("guide") },
                 onNavigateProfile = {navController.navigate("profile") },
-                onNavigateToCreateWorkout = { navController.navigate("create_workout") }
+                onNavigateToCreateWorkout = { navController.navigate("create_workout") },
+                onNavigateToActiveWorkout = { workoutId -> 
+                    navController.navigate("active_workout/$workoutId")
+                }
             )
         }
         composable("profile") {
@@ -118,6 +123,16 @@ fun AppNavigation(
         }
         composable("create_workout") {
             CreateWorkoutScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+        composable(
+            route = "active_workout/{workoutId}",
+            arguments = listOf(navArgument("workoutId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val workoutId = backStackEntry.arguments?.getString("workoutId") ?: return@composable
+            ActiveWorkoutScreen(
+                workoutId = workoutId,
                 onNavigateBack = { navController.popBackStack() }
             )
         }

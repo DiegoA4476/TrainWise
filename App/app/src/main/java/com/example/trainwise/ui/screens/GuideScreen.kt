@@ -26,6 +26,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.trainwise.data.models.Message
 import com.example.trainwise.ui.theme.*
 import com.example.trainwise.ui.viewmodels.GuideViewModel
+import kotlinx.coroutines.launch
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.material.icons.filled.Add
+
+
 
 @Composable
 fun GuideScreen(
@@ -38,6 +43,8 @@ fun GuideScreen(
     val chatMessages = viewModel.chatMessages
     val isLoading = viewModel.isLoading
     val listState = rememberLazyListState()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
     // Scroll to bottom when messages change or loading state changes
     LaunchedEffect(chatMessages.size, isLoading) {
@@ -47,6 +54,7 @@ fun GuideScreen(
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
             GuideBottomNavigationBar(
                 onHomeClick = onNavigateToHome,
@@ -74,7 +82,24 @@ fun GuideScreen(
                 contentPadding = PaddingValues(vertical = 20.dp)
             ) {
                 items(chatMessages) { message ->
-                    ChatBubble(message)
+                    ChatBubble(
+                        message = message,
+                        onImportWorkout = { json ->
+                            viewModel.importWorkout(
+                                jsonString = json,
+                                onSuccess = {
+                                    scope.launch {
+                                        snackbarHostState.showSnackbar("Workout imported successfully!")
+                                    }
+                                },
+                                onError = { error ->
+                                    scope.launch {
+                                        snackbarHostState.showSnackbar("Error: $error")
+                                    }
+                                }
+                            )
+                        }
+                    )
                 }
                 
                 if (isLoading) {
@@ -167,8 +192,8 @@ fun ChatHeader() {
 }
 
 @Composable
-fun ChatBubble(message: Message) {
-    val alignment = if (message.isFromUser) Alignment.CenterEnd else Alignment.CenterStart
+fun ChatBubble(message: Message, onImportWorkout: (String) -> Unit = {}) {
+    val alignment = if (message.isFromUser) Alignment.End else Alignment.Start
     val bgColor = if (message.isFromUser) Orange else CardBackground
     val textColor = if (message.isFromUser) DarkBackground else White
     val shape = if (message.isFromUser) {
@@ -177,18 +202,54 @@ fun ChatBubble(message: Message) {
         RoundedCornerShape(16.dp, 16.dp, 16.dp, 2.dp)
     }
 
-    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = alignment) {
+    val workoutTag = "---WORKOUT_JSON---"
+    val endTag = "---END_JSON---"
+    
+    val hasWorkout = !message.isFromUser && message.content.contains(workoutTag)
+    
+    val displayContent = if (hasWorkout) {
+        message.content.substringBefore(workoutTag).trim()
+    } else {
+        message.content
+    }
+
+    val jsonContent = if (hasWorkout) {
+        message.content.substringAfter(workoutTag).substringBefore(endTag).trim()
+    } else null
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = alignment
+    ) {
         Surface(
             color = bgColor,
             shape = shape,
             modifier = Modifier.widthIn(max = 280.dp)
         ) {
-            Text(
-                text = message.content,
-                modifier = Modifier.padding(12.dp),
-                color = textColor,
-                fontSize = 15.sp
-            )
+            Column {
+                Text(
+                    text = displayContent,
+                    modifier = Modifier.padding(12.dp),
+                    color = textColor,
+                    fontSize = 15.sp
+                )
+                
+                if (hasWorkout && jsonContent != null) {
+                    HorizontalDivider(color = GrayText.copy(alpha = 0.2f))
+                    Button(
+                        onClick = { onImportWorkout(jsonContent) },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+                        modifier = Modifier.fillMaxWidth(),
+                        contentPadding = PaddingValues(12.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Add, "Import", tint = Orange, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("ADD TO MY WORKOUTS", color = Orange, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        }
+                    }
+                }
+            }
         }
     }
 }

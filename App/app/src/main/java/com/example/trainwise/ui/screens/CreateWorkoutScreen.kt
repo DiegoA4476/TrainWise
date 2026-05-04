@@ -66,6 +66,7 @@ fun CreateWorkoutScreen(
     var selectedMuscleGroup by remember { mutableStateOf("All") }
     var searchQuery by remember { mutableStateOf("") }
     var workoutName by remember { mutableStateOf("") }
+    var restTime by remember { mutableIntStateOf(60) }
     var selectedExercises by remember { mutableStateOf(listOf<SelectedExercise>()) }
 
 
@@ -81,6 +82,7 @@ fun CreateWorkoutScreen(
                 title = workoutName,
                 category = selectedTrainingType,
                 exercises = selectedExercises,
+                restTime = restTime
             )
 
             db.collection("workouts").document(workoutId)
@@ -197,6 +199,14 @@ fun CreateWorkoutScreen(
                                 )
                             }
                         }
+
+                        Text("Rest Time Between Sets (seconds)", color = White, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                        CounterItem(
+                            label = "Seconds",
+                            value = restTime,
+                            onValueChange = { restTime = it },
+                            modifier = Modifier.width(150.dp)
+                        )
                     }
                 }
 
