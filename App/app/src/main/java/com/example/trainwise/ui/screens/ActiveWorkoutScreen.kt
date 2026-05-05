@@ -1,6 +1,7 @@
 package com.example.trainwise.ui.screens
 
-
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -49,6 +50,9 @@ fun ActiveWorkoutScreen(
     var isResting by remember { mutableStateOf(false) }
     var restTimeLeft by remember { mutableIntStateOf(workout.restTime) }
     var workoutCompleted by remember { mutableStateOf(false) }
+    
+    // Track start time to calculate duration
+    val startTime = remember { System.currentTimeMillis() }
 
     val currentExercise = workout.exercises[currentExerciseIndex]
     val totalExercises = workout.exercises.size
@@ -68,6 +72,10 @@ fun ActiveWorkoutScreen(
                     currentExerciseIndex++
                     currentSet = 1
                 } else {
+                    // WORKOUT FINISHED
+                    val endTime = System.currentTimeMillis()
+                    val durationMinutes = ((endTime - startTime) / 60000).toInt().coerceAtLeast(1)
+                    viewModel.saveCompletedWorkout(workout, durationMinutes)
                     workoutCompleted = true
                 }
             }
@@ -97,7 +105,7 @@ fun ActiveWorkoutScreen(
                     .padding(padding)
                     .padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
-            ) {1
+            ) {
                 // Progress Header
                 WorkoutProgressHeader(
                     currentIndex = currentExerciseIndex,

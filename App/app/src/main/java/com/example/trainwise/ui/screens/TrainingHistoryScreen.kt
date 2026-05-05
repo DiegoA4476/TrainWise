@@ -12,6 +12,7 @@ import androidx.compose.material.icons.outlined.FitnessCenter
 import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -19,30 +20,20 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.trainwise.data.models.CompletedWorkout
 import com.example.trainwise.ui.theme.*
-
-data class TrainingSession(
-    val id: Int,
-    val title: String,
-    val date: String,
-    val duration: String,
-    val calories: String,
-    val type: String
-)
+import com.example.trainwise.ui.viewmodels.WorkoutViewModel
+import java.text.SimpleDateFormat
+import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TrainingHistoryScreen(
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    viewModel: WorkoutViewModel = viewModel()
 ) {
-    val history = listOf(
-        TrainingSession(1, "Full Body Workout", "Oct 24, 2023", "45 min", "320 kcal", "Strength"),
-        TrainingSession(2, "Morning Run", "Oct 22, 2023", "30 min", "250 kcal", "Cardio"),
-        TrainingSession(3, "Leg Day", "Oct 20, 2023", "50 min", "400 kcal", "Strength"),
-        TrainingSession(4, "Yoga Session", "Oct 18, 2023", "60 min", "150 kcal", "Flexibility"),
-        TrainingSession(5, "HIIT Cardio", "Oct 15, 2023", "25 min", "350 kcal", "Cardio"),
-        TrainingSession(6, "Upper Body", "Oct 12, 2023", "40 min", "280 kcal", "Strength")
-    )
+    val history by viewModel.completedWorkouts
 
     Scaffold(
         topBar = {
@@ -58,26 +49,38 @@ fun TrainingHistoryScreen(
         },
         containerColor = DarkBackground
     ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            item { Spacer(modifier = Modifier.height(10.dp)) }
-            
-            items(history) { session ->
-                HistoryCard(session)
+        if (history.isEmpty()) {
+            Box(
+                modifier = Modifier.fillMaxSize().padding(padding),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("No training history yet. Time to hit the gym!", color = GrayText)
             }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(horizontal = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                item { Spacer(modifier = Modifier.height(10.dp)) }
+                
+                items(history) { session ->
+                    HistoryCard(session)
+                }
 
-            item { Spacer(modifier = Modifier.height(20.dp)) }
+                item { Spacer(modifier = Modifier.height(20.dp)) }
+            }
         }
     }
 }
 
 @Composable
-fun HistoryCard(session: TrainingSession) {
+fun HistoryCard(session: CompletedWorkout) {
+    val sdf = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
+    val dateString = sdf.format(Date(session.timestamp))
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = CardBackground),
@@ -102,7 +105,7 @@ fun HistoryCard(session: TrainingSession) {
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     Text(
-                        text = session.type,
+                        text = session.category,
                         color = Orange,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                         fontSize = 12.sp,
@@ -117,9 +120,9 @@ fun HistoryCard(session: TrainingSession) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                HistoryDetailItem(Icons.Outlined.CalendarToday, session.date)
-                HistoryDetailItem(Icons.Outlined.Timer, session.duration)
-                HistoryDetailItem(Icons.Outlined.FitnessCenter, session.calories)
+                HistoryDetailItem(Icons.Outlined.CalendarToday, dateString)
+                HistoryDetailItem(Icons.Outlined.Timer, "${session.durationMinutes} min")
+                HistoryDetailItem(Icons.Outlined.FitnessCenter, "${session.caloriesBurned} kcal")
             }
         }
     }

@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.example.trainwise.data.models.Workout
+import com.example.trainwise.data.models.CompletedWorkout
 import com.google.firebase.firestore.Query
 
 
@@ -16,26 +17,20 @@ class WorkoutViewModel : ViewModel() {
     private val _workouts = mutableStateOf<List<Workout>>(emptyList())
     val workouts: State<List<Workout>> = _workouts
 
+    private val _completedWorkouts = mutableStateOf<List<CompletedWorkout>>(emptyList())
+    val completedWorkouts: State<List<CompletedWorkout>> = _completedWorkouts
+
     var isLoading = mutableStateOf(true)
 
     init {
         fetchWorkouts()
+        fetchHistory()
     }
 
     fun fetchWorkouts() {
         val userId = auth.currentUser?.uid ?: return
         isLoading.value = true
-        db.collection("workouts")
-            .whereEqualTo("userId", userId)
-            .orderBy("createdAt", Query.Direction.DESCENDING)
-            .get()
-            .addOnSuccessListener { snapshot ->
-                val list = snapshot.toObjects(Workout::class.java)
-                _workouts.value = list.sortedByDescending { it.createdAt }
-                isLoading.value = false
-            }
-
-
+        
         db.collection("workouts")
             .whereEqualTo("userId", userId)
             .addSnapshotListener { snapshot, e ->
@@ -52,6 +47,18 @@ class WorkoutViewModel : ViewModel() {
             }
     }
 
+    fun fetchHistory() {
+        val userId = auth.currentUser?.uid ?: return
+        db.collection("completed_workouts")
+            .whereEqualTo("userId", userId)
+            .orderBy("timestamp", Query.Direction.DESCENDING)
+            .addSnapshotListener { snapshot, e ->
+                if (snapshot != null) {
+                    _completedWorkouts.value = snapshot.toObjects(CompletedWorkout::class.java)
+                }
+            }
+    }
+
     fun deleteWorkout(workoutId: String) {
         if (workoutId.isEmpty()) return
 
@@ -60,8 +67,26 @@ class WorkoutViewModel : ViewModel() {
             .addOnSuccessListener {
                 _workouts.value = _workouts.value.filter { it.id != workoutId }
             }
-            .addOnFailureListener { e ->
-                println("Error deleting workout: ${e.message}")
-            }
+    }
+
+    fun saveCompletedWorkout(workout: Workout, durationMinutes: Int) {
+        val userId = auth.currentUser?.uid ?: return
+        val id = db.collection("completed_workouts").document().id
+        
+        // Simple calorie calculation: ~7 kcal per minute for strength training
+        val calories = durationMinutes * 7
+
+        val completed = CompletedWorkout(
+            id = id,
+            userId = userId,
+            workoutId = workout.id,
+            title = workout.title,
+            category = workout.category,
+            durationMinutes = durationMinutes,
+            caloriesBurned = calories,
+            timestamp = System.currentTimeMillis()
+        )
+
+        db.collection("completed_workouts").document(id).set(completed)
     }
 }
