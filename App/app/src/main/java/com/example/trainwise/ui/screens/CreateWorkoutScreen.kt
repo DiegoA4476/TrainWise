@@ -246,7 +246,7 @@ fun CreateWorkoutScreen(
                             }
                         }
 
-                        Text("Rest Time Between Sets (seconds)", color = White, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                        Text("Rest Time Between Sets", color = White, fontSize = 14.sp, fontWeight = FontWeight.Medium)
                         CounterItem(
                             label = "Seconds",
                             value = restTime,

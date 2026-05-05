@@ -97,7 +97,7 @@ fun ActiveWorkoutScreen(
                     .padding(padding)
                     .padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
-            ) {
+            ) {1
                 // Progress Header
                 WorkoutProgressHeader(
                     currentIndex = currentExerciseIndex,

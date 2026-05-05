@@ -18,7 +18,6 @@ import com.example.trainwise.data.models.Workout
 import com.example.trainwise.data.models.SelectedExercise
 import com.example.trainwise.data.models.Exercise
 import org.json.JSONObject
-import org.json.JSONArray
 
 class GuideViewModel : ViewModel() {
     private val db = FirebaseFirestore.getInstance()
@@ -27,8 +26,8 @@ class GuideViewModel : ViewModel() {
     private val generativeModel = GenerativeModel(
         modelName = AiConfig.MODEL_NAME,
         apiKey = AiConfig.GEMINI_API_KEY,
-        systemInstruction = content { 
-            text(AiConfig.SYSTEM_INSTRUCTIONS + "\n\nIf the user asks for a workout plan, provide it in natural language FIRST, and then at the very end of your message, include a JSON block starting with '---WORKOUT_JSON---' and ending with '---END_JSON---'. The JSON should follow this structure:\n{\n  \"title\": \"Workout Name\",\n  \"category\": \"Strength/Cardio/etc\",\n  \"restTime\": 60,\n  \"exercises\": [\n    {\"name\": \"Exercise Name\", \"muscleGroup\": \"Chest/Back/etc\", \"reps\": 10, \"sets\": 3}\n  ]\n}") 
+        systemInstruction = content {
+            text(AiConfig.SYSTEM_INSTRUCTIONS + AiConfig.WORKOUT_INSTRUCTIONS) 
         }
     )
 
@@ -79,12 +78,8 @@ class GuideViewModel : ViewModel() {
                     e.message?.contains("503") == true || e.message?.contains("high demand") == true -> {
                         "WiseBot is currently very busy helping other athletes. Please try again in a moment! 💪"
                     }
-                    e.message?.contains("429") == true -> {
-                        "Take a breather! You've reached the message limit. Try again in a minute."
-                    }
-                    else -> "Oops! Something went wrong with WiseBot. Please check your connection and try again."
+                    else -> "Oops! Something went wrong. Please check your connection."
                 }
-                
                 chatMessages.add(Message(errorMessage, false))
             } finally {
                 isLoading = false
@@ -105,7 +100,7 @@ class GuideViewModel : ViewModel() {
                 selectedExercises.add(
                     SelectedExercise(
                         exercise = Exercise(
-                            id = (100..999).random(), // Temporary ID for AI exercises
+                            id = (100..999).random(),
                             name = exJson.getString("name"),
                             muscleGroup = exJson.getString("muscleGroup")
                         ),
@@ -122,8 +117,7 @@ class GuideViewModel : ViewModel() {
                 title = json.getString("title"),
                 category = json.getString("category"),
                 exercises = selectedExercises,
-                restTime = json.optInt("restTime", 60),
-                duration = selectedExercises.size * 5
+                restTime = json.optInt("restTime", 60)
             )
 
             db.collection("workouts").document(workoutId)

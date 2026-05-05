@@ -22,11 +22,22 @@ class WorkoutViewModel : ViewModel() {
         fetchWorkouts()
     }
 
-    private fun fetchWorkouts() {
+    fun fetchWorkouts() {
         val userId = auth.currentUser?.uid ?: return
+        isLoading.value = true
         db.collection("workouts")
             .whereEqualTo("userId", userId)
             .orderBy("createdAt", Query.Direction.DESCENDING)
+            .get()
+            .addOnSuccessListener { snapshot ->
+                val list = snapshot.toObjects(Workout::class.java)
+                _workouts.value = list.sortedByDescending { it.createdAt }
+                isLoading.value = false
+            }
+
+
+        db.collection("workouts")
+            .whereEqualTo("userId", userId)
             .addSnapshotListener { snapshot, e ->
                 if (e != null) {
                     isLoading.value = false
@@ -35,7 +46,7 @@ class WorkoutViewModel : ViewModel() {
 
                 if (snapshot != null) {
                     val list = snapshot.toObjects(Workout::class.java)
-                    _workouts.value = list
+                    _workouts.value = list.sortedByDescending { it.createdAt }
                     isLoading.value = false
                 }
             }
@@ -47,11 +58,10 @@ class WorkoutViewModel : ViewModel() {
         db.collection("workouts").document(workoutId)
             .delete()
             .addOnSuccessListener {
-                println("Workout deleted successfully")
+                _workouts.value = _workouts.value.filter { it.id != workoutId }
             }
             .addOnFailureListener { e ->
                 println("Error deleting workout: ${e.message}")
             }
     }
-
 }

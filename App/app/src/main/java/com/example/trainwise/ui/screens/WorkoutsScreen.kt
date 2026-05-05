@@ -40,8 +40,14 @@ fun WorkoutsScreen(
     onNavigateToActiveWorkout: (String) -> Unit,
     viewModel: WorkoutViewModel = viewModel()
 ) {
+    LaunchedEffect(Unit) {
+        viewModel.fetchWorkouts()
+    }
+
     val categories = listOf("All", "Strength", "Cardio", "Yoga", "HIIT", "Flexibility")
     var selectedCategory by remember { mutableStateOf("All") }
+
+    var workoutToDelete by remember { mutableStateOf<Workout?>(null) }
 
     val workouts by viewModel.workouts
     val isLoading by viewModel.isLoading
@@ -50,6 +56,31 @@ fun WorkoutsScreen(
         workouts
     } else {
         workouts.filter { it.category == selectedCategory }
+    }
+
+    workoutToDelete?.let { workout ->
+        AlertDialog(
+            onDismissRequest = { workoutToDelete = null },
+            title = { Text("Delete Workout", color = White) },
+            text = { Text("Are you sure you want to delete '${workout.title}'? This action cannot be undone.", color = GrayText) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.deleteWorkout(workout.id)
+                        workoutToDelete = null
+                    }
+                ) {
+                    Text("Delete", color = Color.Red, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { workoutToDelete = null }) {
+                    Text("Cancel", color = GrayText)
+                }
+            },
+            containerColor = CardBackground,
+            shape = RoundedCornerShape(20.dp)
+        )
     }
 
     Scaffold(
@@ -82,7 +113,6 @@ fun WorkoutsScreen(
                 modifier = Modifier.fillMaxSize().padding(padding),
                 contentPadding = PaddingValues(bottom = 80.dp)
             ) {
-                // Selector de Categorías
                 item {
                     LazyRow(
                         modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
@@ -114,11 +144,11 @@ fun WorkoutsScreen(
                         )
                     }
 
-                    items(filteredWorkouts) { workout ->
+                    items(filteredWorkouts, key = { it.id }) { workout ->
                         WorkoutListItem(
                             workout = workout,
                             onDelete = {
-                                viewModel.deleteWorkout(workout.id)
+                                workoutToDelete = workout
                             },
                             onClick = {
                                 onNavigateToActiveWorkout(workout.id)
@@ -223,8 +253,6 @@ fun WorkoutListItem(
                     )
                 }
             }
-
-            // Botón de Eliminar
             IconButton(onClick = onDelete) {
                 Icon(
                     imageVector = Icons.Default.Delete,
