@@ -1,6 +1,17 @@
 package com.example.trainwise.ui.screens
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.ImageDecoder
+import android.net.Uri
+import android.os.Build
+import android.provider.MediaStore
+import android.util.Base64
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.launch
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -18,7 +29,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -26,6 +40,7 @@ import com.example.trainwise.ui.components.CustomTextField
 import com.example.trainwise.ui.theme.*
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import java.io.ByteArrayOutputStream
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,16 +50,30 @@ fun AccountDetailsScreen(
     val auth = FirebaseAuth.getInstance()
     val db = FirebaseFirestore.getInstance()
     val userId = auth.currentUser?.uid
+    val context = LocalContext.current
 
     // Estados para los campos
     var username by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("********") } // La contraseña no se suele editar aquí por seguridad
+    var password by remember { mutableStateOf("********") }
     var phone by remember { mutableStateOf("") }
     var height by remember { mutableStateOf("") }
     var weight by remember { mutableStateOf("") }
+    var profileImageBase64 by remember { mutableStateOf<String?>(null) }
+    var showImageSourceDialog by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(true) }
     var isSaving by remember { mutableStateOf(false) }
+
+    val profileBitmap = remember(profileImageBase64) {
+        if (profileImageBase64 != null) {
+            try {
+                val decodedString = Base64.decode(profileImageBase64, Base64.DEFAULT)
+                BitmapFactory.decodeByteArray(decodedString, 0, decodedString.size)
+            } catch (e: Exception) {
+                null
+            }
+        } else null
+    }
 
     LaunchedEffect(userId) {
         userId?.let { id ->
@@ -56,6 +85,7 @@ fun AccountDetailsScreen(
                         phone = document.getString("phone") ?: ""
                         height = document.getString("height") ?: ""
                         weight = document.getString("weight") ?: ""
+                        profileImageBase64 = document.getString("profileImage")
                     }
                     isLoading = false
                 }
@@ -64,6 +94,48 @@ fun AccountDetailsScreen(
                 }
         }
     }
+
+    fun saveImageToFirestore(bitmap: Bitmap) {
+        val outputStream = ByteArrayOutputStream()
+        bitmap.compress(Bitmap.CompressFormat.JPEG, 60, outputStream)
+        val byteArray = outputStream.toByteArray()
+        val base64 = Base64.encodeToString(byteArray, Base64.DEFAULT)
+        
+        userId?.let { id ->
+            db.collection("users").document(id)
+                .update("profileImage", base64)
+                .addOnSuccessListener {
+                    profileImageBase64 = base64
+                }
+        }
+    }
+
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicturePreview()
+    ) { bitmap ->
+        if (bitmap != null) {
+            saveImageToFirestore(bitmap)
+        }
+    }
+
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            try {
+                val bitmap = if (Build.VERSION.SDK_INT < 28) {
+                    MediaStore.Images.Media.getBitmap(context.contentResolver, it)
+                } else {
+                    val source = ImageDecoder.createSource(context.contentResolver, it)
+                    ImageDecoder.decodeBitmap(source)
+                }
+                saveImageToFirestore(bitmap)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
     val saveChanges = {
         if (userId != null) {
             isSaving = true
@@ -82,6 +154,47 @@ fun AccountDetailsScreen(
                     isSaving = false
                 }
         }
+    }
+
+    if (showImageSourceDialog) {
+        AlertDialog(
+            onDismissRequest = { showImageSourceDialog = false },
+            title = { Text("Select Profile Picture", color = White) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = {
+                            showImageSourceDialog = false
+                            cameraLauncher.launch()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = Orange)
+                    ) {
+                        Icon(Icons.Outlined.PhotoCamera, null, modifier = Modifier.padding(end = 8.dp))
+                        Text("Take Photo")
+                    }
+                    Button(
+                        onClick = {
+                            showImageSourceDialog = false
+                            galleryLauncher.launch("image/*")
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = CardBackground)
+                    ) {
+                        Icon(Icons.Outlined.PhotoLibrary, null, modifier = Modifier.padding(end = 8.dp))
+                        Text("Choose from Gallery")
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showImageSourceDialog = false }) {
+                    Text("Cancel", color = GrayText)
+                }
+            },
+            containerColor = DarkBackground,
+            shape = RoundedCornerShape(24.dp)
+        )
     }
 
     Scaffold(
@@ -130,14 +243,24 @@ fun AccountDetailsScreen(
                             .clip(CircleShape)
                             .background(CardBackground)
                             .border(2.dp, Orange, CircleShape)
-                            .clickable { /* Lógica para cambiar foto */ }
+                            .clickable { showImageSourceDialog = true },
+                        contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            Icons.Outlined.Person,
-                            contentDescription = null,
-                            modifier = Modifier.fillMaxSize().padding(20.dp),
-                            tint = GrayText
-                        )
+                        if (profileBitmap != null) {
+                            Image(
+                                bitmap = profileBitmap.asImageBitmap(),
+                                contentDescription = "Profile Picture",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Icon(
+                                Icons.Outlined.Person,
+                                contentDescription = null,
+                                modifier = Modifier.fillMaxSize().padding(20.dp),
+                                tint = GrayText
+                            )
+                        }
                     }
 
                     Surface(
@@ -146,7 +269,7 @@ fun AccountDetailsScreen(
                         modifier = Modifier
                             .size(36.dp)
                             .border(2.dp, DarkBackground, CircleShape)
-                            .clickable { /* Lógica para cambiar foto */ }
+                        
                     ) {
                         Icon(
                             Icons.Outlined.CameraAlt,
@@ -173,7 +296,7 @@ fun AccountDetailsScreen(
                     InfoField(
                         label = "Email Address",
                         value = email,
-                        onValueChange = { /* El email suele ser de solo lectura */ },
+                        onValueChange = {},
                         icon = Icons.Outlined.Email
                     )
                     InfoField(
@@ -216,7 +339,7 @@ fun AccountDetailsScreen(
                 Spacer(modifier = Modifier.height(40.dp))
 
                 Button(
-                    onClick = { /* complete to deactivate account */ },
+                    onClick = { /* Lógica para desactivar */ },
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
                     border = BorderStroke(1.dp, Color.Red),
