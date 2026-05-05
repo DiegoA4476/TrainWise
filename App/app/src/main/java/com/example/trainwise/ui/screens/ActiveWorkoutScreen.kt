@@ -47,7 +47,6 @@ fun ActiveWorkoutScreen(
 
     var currentExerciseIndex by remember { mutableIntStateOf(0) }
     var currentSet by remember { mutableIntStateOf(1) }
-    var repsDone by remember { mutableIntStateOf(0) }
     var isResting by remember { mutableStateOf(false) }
     var restTimeLeft by remember { mutableIntStateOf(workout.restTime) }
     var workoutCompleted by remember { mutableStateOf(false) }
@@ -73,7 +72,6 @@ fun ActiveWorkoutScreen(
                     workoutCompleted = true
                 }
             }
-            repsDone = 0
         }
     }
 
@@ -116,12 +114,6 @@ fun ActiveWorkoutScreen(
                     ExerciseDisplay(
                         exercise = currentExercise,
                         currentSet = currentSet,
-                        repsDone = repsDone,
-                        onRepClick = {
-                            if (repsDone < currentExercise.reps) {
-                                repsDone++
-                            }
-                        },
                         onFinishSet = {
                             isResting = true
                         }
@@ -199,17 +191,17 @@ fun WorkoutProgressHeader(currentIndex: Int, total: Int, exerciseName: String) {
 fun ExerciseDisplay(
     exercise: SelectedExercise,
     currentSet: Int,
-    repsDone: Int,
-    onRepClick: () -> Unit,
     onFinishSet: () -> Unit
 ) {
+    val setsRemaining = exercise.sets - currentSet + 1
+
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
-            "SET $currentSet OF ${exercise.sets}",
+            "TARGET: ${exercise.reps} REPS",
             color = Orange,
-            fontSize = 18.sp,
+            fontSize = 20.sp,
             fontWeight = FontWeight.ExtraBold,
-            letterSpacing = 2.sp
+            letterSpacing = 1.sp
         )
 
         Spacer(modifier = Modifier.height(40.dp))
@@ -220,18 +212,18 @@ fun ExerciseDisplay(
                 .clip(CircleShape)
                 .background(Brush.radialGradient(listOf(Orange.copy(alpha = 0.2f), Color.Transparent)))
                 .border(4.dp, Orange, CircleShape)
-                .clickable { onRepClick() },
+                .clickable { onFinishSet() },
             contentAlignment = Alignment.Center
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    repsDone.toString(),
+                    setsRemaining.toString(),
                     color = White,
                     fontSize = 64.sp,
                     fontWeight = FontWeight.Black
                 )
                 Text(
-                    "REPS",
+                    if (setsRemaining == 1) "SET LEFT" else "SETS LEFT",
                     color = GrayText,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold
@@ -240,7 +232,7 @@ fun ExerciseDisplay(
         }
 
         Spacer(modifier = Modifier.height(16.dp))
-        Text("Tap the circle for each rep", color = GrayText, fontSize = 14.sp)
+        Text("Tap the circle or button to finish set", color = GrayText, fontSize = 14.sp)
 
         Spacer(modifier = Modifier.height(48.dp))
 
