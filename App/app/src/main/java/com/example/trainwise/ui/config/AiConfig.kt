@@ -26,7 +26,7 @@ object AiConfig {
         {
             "title": "Workout Name",
             "category": "Strength/Cardio/Yoga/HIIT",
-            "restTime": "rest time",
+            "restTime": 0,
             "exercises": [
             {
                 "name": "Exercise Name",
