@@ -7,6 +7,6 @@ data class Workout(
     val category: String = "Strength",
     val exercises: List<SelectedExercise> = listOf(),
     val duration: Int = 0,
-    val restTime: Int = 60,
+    val restTime: Int = 0,
     val createdAt: Long = System.currentTimeMillis()
 )
