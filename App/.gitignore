@@ -15,4 +15,4 @@
 local.properties
 
 # Ignore AI configuration file
-**/AiConfig.kt
+/app/src/main/java/com.example.trainwise/ui/config
