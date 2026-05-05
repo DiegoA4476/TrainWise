@@ -3,6 +3,7 @@ package com.example.trainwise.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Person
@@ -14,6 +15,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.withStyle
@@ -31,6 +33,19 @@ fun LoginScreen(onNavigateToSignUp: () -> Unit, onLoginSuccess: () -> Unit) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var showError by remember { mutableStateOf(false) }
+
+    val handleLogin = {
+        if (email.isNotEmpty() && password.isNotEmpty()) {
+            auth.signInWithEmailAndPassword(email, password)
+                .addOnCompleteListener { task ->
+                    if (task.isSuccessful) {
+                        onLoginSuccess()
+                    } else {
+                        showError = true
+                    }
+                }
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -65,6 +80,7 @@ fun LoginScreen(onNavigateToSignUp: () -> Unit, onLoginSuccess: () -> Unit) {
                 showError = false
             },
             placeholder = "Enter email",
+            imeAction = ImeAction.Next,
             leadingIcon = {
                 Icon(
                     imageVector = Icons.Outlined.Person,
@@ -88,6 +104,8 @@ fun LoginScreen(onNavigateToSignUp: () -> Unit, onLoginSuccess: () -> Unit) {
             placeholder = "Enter password",
             visualTransformation = PasswordVisualTransformation(),
             keyboardType = KeyboardType.Password,
+            imeAction = ImeAction.Done,
+            keyboardActions = KeyboardActions(onDone = { handleLogin() }),
             leadingIcon = {
                 Icon(
                     imageVector = Icons.Outlined.Lock,
@@ -111,16 +129,7 @@ fun LoginScreen(onNavigateToSignUp: () -> Unit, onLoginSuccess: () -> Unit) {
 
         // Login Button
         Button(
-            onClick = {
-                auth.signInWithEmailAndPassword(email, password)
-                    .addOnCompleteListener { task ->
-                        if (task.isSuccessful) {
-                            onLoginSuccess()
-                        } else {
-                            showError = true
-                        }
-                    }
-            },
+            onClick = handleLogin,
             modifier = Modifier.fillMaxWidth().height(70.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Orange),
             shape = RoundedCornerShape(35.dp)

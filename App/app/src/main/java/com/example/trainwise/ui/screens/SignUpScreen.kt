@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Email
@@ -17,20 +18,18 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.trainwise.ui.components.CustomTextField
-import com.example.trainwise.ui.theme.DarkBackground
-import com.example.trainwise.ui.theme.Orange
-import com.example.trainwise.ui.theme.White
+import com.example.trainwise.ui.theme.*
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthWeakPasswordException
 import com.google.firebase.auth.userProfileChangeRequest
 import com.google.firebase.firestore.FirebaseFirestore
-
 
 @Composable
 fun SignUpScreen(onNavigateToLogin: () -> Unit) {
@@ -43,6 +42,53 @@ fun SignUpScreen(onNavigateToLogin: () -> Unit) {
     var confirmPassword by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(false) }
+
+    val handleSignUp: () -> Unit = {
+        if (name.isBlank() || email.isBlank() || password.isBlank()) {
+            errorMessage = "Please fill in all fields"
+        } else if (password != confirmPassword) {
+            errorMessage = "Passwords do not match"
+        } else {
+            isLoading = true
+            auth.createUserWithEmailAndPassword(email, password)
+                .addOnCompleteListener { task ->
+                    if (task.isSuccessful) {
+                        val user = auth.currentUser
+                        val userId = user?.uid ?: ""
+
+                        val profileUpdates = userProfileChangeRequest { displayName = name }
+                        user?.updateProfile(profileUpdates)
+
+                        val userProfile = hashMapOf(
+                            "uid" to userId,
+                            "username" to name,
+                            "email" to email,
+                            "phone" to "",
+                            "height" to "",
+                            "weight" to ""
+                        )
+
+                        db.collection("users").document(userId)
+                            .set(userProfile)
+                            .addOnSuccessListener {
+                                isLoading = false
+                                onNavigateToLogin()
+                            }
+                            .addOnFailureListener { e ->
+                                isLoading = false
+                                errorMessage = "Error saving data: ${e.message}"
+                            }
+                    } else {
+                        isLoading = false
+                        val exception = task.exception
+                        errorMessage = when (exception) {
+                            is FirebaseAuthWeakPasswordException -> "Password is too weak"
+                            else -> exception?.message ?: "Registration failed"
+                        }
+                    }
+                }
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -73,6 +119,7 @@ fun SignUpScreen(onNavigateToLogin: () -> Unit) {
             value = name,
             onValueChange = { name = it; errorMessage = null },
             placeholder = "Enter your name",
+            imeAction = ImeAction.Next,
             leadingIcon = { Icon(Icons.Outlined.Person, null, tint = White, modifier = Modifier.size(28.dp)) }
         )
 
@@ -84,6 +131,7 @@ fun SignUpScreen(onNavigateToLogin: () -> Unit) {
             onValueChange = { email = it; errorMessage = null },
             placeholder = "Enter your email",
             keyboardType = KeyboardType.Email,
+            imeAction = ImeAction.Next,
             leadingIcon = { Icon(Icons.Outlined.Email, null, tint = White, modifier = Modifier.size(28.dp)) }
         )
 
@@ -96,6 +144,7 @@ fun SignUpScreen(onNavigateToLogin: () -> Unit) {
             placeholder = "Create password",
             visualTransformation = PasswordVisualTransformation(),
             keyboardType = KeyboardType.Password,
+            imeAction = ImeAction.Next,
             leadingIcon = { Icon(Icons.Outlined.Lock, null, tint = White, modifier = Modifier.size(28.dp)) }
         )
 
@@ -108,6 +157,8 @@ fun SignUpScreen(onNavigateToLogin: () -> Unit) {
             placeholder = "Confirm password",
             visualTransformation = PasswordVisualTransformation(),
             keyboardType = KeyboardType.Password,
+            imeAction = ImeAction.Done,
+            keyboardActions = KeyboardActions(onDone = { handleSignUp() }),
             leadingIcon = { Icon(Icons.Outlined.Lock, null, tint = White, modifier = Modifier.size(28.dp)) }
         )
 
@@ -119,56 +170,7 @@ fun SignUpScreen(onNavigateToLogin: () -> Unit) {
         Spacer(modifier = Modifier.height(32.dp))
 
         Button(
-            onClick = {
-                if (name.isBlank() || email.isBlank() || password.isBlank()) {
-                    errorMessage = "Please fill in all fields"
-                    return@Button
-                }
-                if (password != confirmPassword) {
-                    errorMessage = "Passwords do not match"
-                    return@Button
-                }
-
-                isLoading = true
-                auth.createUserWithEmailAndPassword(email, password)
-                    .addOnCompleteListener { task ->
-                        if (task.isSuccessful) {
-                            val user = auth.currentUser
-                            val userId = user?.uid ?: ""
-
-
-                            val profileUpdates = userProfileChangeRequest { displayName = name }
-                            user?.updateProfile(profileUpdates)
-
-                            val userProfile = hashMapOf(
-                                "uid" to userId,
-                                "username" to name,
-                                "email" to email,
-                                "phone" to "",
-                                "height" to "",   // empty at start, can complete in account details
-                                "weight" to ""
-                            )
-
-                            db.collection("users").document(userId)
-                                .set(userProfile)
-                                .addOnSuccessListener {
-                                    isLoading = false
-                                    onNavigateToLogin()
-                                }
-                                .addOnFailureListener { e ->
-                                    isLoading = false
-                                    errorMessage = "Error saving data: ${e.message}"
-                                }
-                        } else {
-                            isLoading = false
-                            val exception = task.exception
-                            errorMessage = when (exception) {
-                                is FirebaseAuthWeakPasswordException -> "Password is too weak"
-                                else -> exception?.message ?: "Registration failed"
-                            }
-                        }
-                    }
-            },
+            onClick = handleSignUp,
             modifier = Modifier.fillMaxWidth().height(70.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Orange),
             shape = RoundedCornerShape(35.dp),

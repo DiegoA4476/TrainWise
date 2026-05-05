@@ -45,18 +45,64 @@ fun CreateWorkoutScreen(
 
 
     val allExercises = listOf(
+        // Chest
         Exercise(1, "Bench Press", "Chest"),
         Exercise(2, "Push Ups", "Chest"),
+        Exercise(13, "Incline Bench Press", "Chest"),
+        Exercise(14, "Decline Bench Press", "Chest"),
+        Exercise(15, "Chest Flys", "Chest"),
+        Exercise(16, "Cable Crossover", "Chest"),
+        Exercise(17, "Dips (Chest Focus)", "Chest"),
+
+        // Back
         Exercise(3, "Pull Ups", "Back"),
         Exercise(4, "Deadlift", "Back"),
+        Exercise(18, "Lat Pulldowns", "Back"),
+        Exercise(19, "Seated Row", "Back"),
+        Exercise(20, "Bent Over Row", "Back"),
+        Exercise(21, "T-Bar Row", "Back"),
+        Exercise(22, "Hyperextensions", "Back"),
+        Exercise(23, "Single Arm Dumbbell Row", "Back"),
+
+        // Legs
         Exercise(5, "Squats", "Legs"),
         Exercise(6, "Lunges", "Legs"),
+        Exercise(24, "Leg Press", "Legs"),
+        Exercise(25, "Leg Extension", "Legs"),
+        Exercise(26, "Leg Curl", "Legs"),
+        Exercise(27, "Calf Raises", "Legs"),
+        Exercise(28, "Romanian Deadlift", "Legs"),
+        Exercise(29, "Bulgarian Split Squats", "Legs"),
+        Exercise(30, "Hack Squats", "Legs"),
+
+        // Shoulders
         Exercise(7, "Shoulder Press", "Shoulders"),
         Exercise(8, "Lateral Raises", "Shoulders"),
+        Exercise(31, "Front Raises", "Shoulders"),
+        Exercise(32, "Reverse Flys", "Shoulders"),
+        Exercise(33, "Arnold Press", "Shoulders"),
+        Exercise(34, "Face Pulls", "Shoulders"),
+        Exercise(35, "Upright Row", "Shoulders"),
+
+        // Arms
         Exercise(9, "Bicep Curls", "Arms"),
         Exercise(10, "Tricep Dips", "Arms"),
+        Exercise(36, "Hammer Curls", "Arms"),
+        Exercise(37, "Preacher Curls", "Arms"),
+        Exercise(38, "Skull Crushers", "Arms"),
+        Exercise(39, "Overhead Tricep Extension", "Arms"),
+        Exercise(40, "Concentration Curls", "Arms"),
+        Exercise(41, "Tricep Pushdowns", "Arms"),
+
+        // Core
         Exercise(11, "Plank", "Core"),
-        Exercise(12, "Crunches", "Core")
+        Exercise(12, "Crunches", "Core"),
+        Exercise(42, "Leg Raises", "Core"),
+        Exercise(43, "Russian Twists", "Core"),
+        Exercise(44, "Mountain Climbers", "Core"),
+        Exercise(45, "Bicycle Crunches", "Core"),
+        Exercise(46, "Dead Bug", "Core"),
+        Exercise(47, "Hanging Leg Raises", "Core")
     )
 
     val trainingTypes = listOf("Strength", "Cardio", "Yoga", "HIIT", "Flexibility")

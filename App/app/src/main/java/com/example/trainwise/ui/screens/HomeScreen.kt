@@ -11,8 +11,7 @@ import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -57,7 +56,7 @@ fun HomeScreen(
     )
 
     val cameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(LatLng(0.0, 0.0), 15f)
+        position = CameraPosition.fromLatLngZoom(LatLng(0.0, 0.0), 13f)
     }
 
     LaunchedEffect(locationPermissionState.allPermissionsGranted) {
@@ -69,13 +68,13 @@ fun HomeScreen(
                         location?.let {
                             val userLatLng = LatLng(it.latitude, it.longitude)
                             viewModel.fetchNearbyGyms(userLatLng, apiKey)
-                            cameraPositionState.position = CameraPosition.fromLatLngZoom(userLatLng, 15f)
+                            cameraPositionState.position = CameraPosition.fromLatLngZoom(userLatLng, 13f)
                         } ?: run {
                             fusedLocationClient.lastLocation.addOnSuccessListener { lastLoc ->
                                 lastLoc?.let {
                                     val userLatLng = LatLng(it.latitude, it.longitude)
                                     viewModel.fetchNearbyGyms(userLatLng, apiKey)
-                                    cameraPositionState.position = CameraPosition.fromLatLngZoom(userLatLng, 15f)
+                                    cameraPositionState.position = CameraPosition.fromLatLngZoom(userLatLng, 13f)
                                 }
                             }
                         }
@@ -98,101 +97,100 @@ fun HomeScreen(
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
-        LazyColumn(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            item {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(300.dp)
-                        .padding(16.dp)
-                        .clip(RoundedCornerShape(16.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(350.dp)
+                    .padding(16.dp)
+                    .clip(RoundedCornerShape(16.dp))
+            ) {
+                GoogleMap(
+                    modifier = Modifier.fillMaxSize(),
+                    cameraPositionState = cameraPositionState,
+                    properties = MapProperties(
+                        isMyLocationEnabled = locationPermissionState.allPermissionsGranted,
+                        mapStyleOptions = MapStyleOptions.loadRawResourceStyle(context, R.raw.map_style)
+                    ),
+                    uiSettings = MapUiSettings(
+                        myLocationButtonEnabled = true,
+                        scrollGesturesEnabled = true,
+                        zoomGesturesEnabled = true,
+                        tiltGesturesEnabled = true,
+                        rotationGesturesEnabled = true
+                    )
                 ) {
-                    GoogleMap(
-                        modifier = Modifier.fillMaxSize(),
-                        cameraPositionState = cameraPositionState,
-                        properties = MapProperties(
-                            isMyLocationEnabled = locationPermissionState.allPermissionsGranted,
-                            mapStyleOptions = MapStyleOptions.loadRawResourceStyle(context, R.raw.map_style)
-                        ),
-                        uiSettings = MapUiSettings(myLocationButtonEnabled = true,
-                            scrollGesturesEnabled = false,
-                            zoomGesturesEnabled = true)
-                    ) {
-                        viewModel.gyms.forEach { gym ->
-                            Marker(
-                                state = MarkerState(position = gym.location),
-                                title = gym.name,
-                                snippet = "${gym.rating} ★",
-                                icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_ORANGE),
-                                onInfoWindowClick = {
-                                    viewModel.selectGym(gym)
-                                    onNavigateToGymDetails()
-                                }
-                            )
-                        }
+                    viewModel.gyms.forEach { gym ->
+                        Marker(
+                            state = MarkerState(position = gym.location),
+                            title = gym.name,
+                            snippet = "${gym.rating} ★",
+                            icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_ORANGE),
+                            onInfoWindowClick = {
+                                viewModel.selectGym(gym)
+                                onNavigateToGymDetails()
+                            }
+                        )
                     }
-                    if (viewModel.isLoading) {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(color = Orange)
-                        }
+                }
+                if (viewModel.isLoading) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = Orange)
                     }
                 }
             }
 
-            item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        "Gyms near you",
-                        color = White,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    if (viewModel.isLoading) {
-                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = Orange)
-                    }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "Gyms near you",
+                    color = White,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                if (viewModel.isLoading) {
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = Orange)
                 }
             }
 
             if (viewModel.errorMessage != null) {
-                item {
-                    Text(
-                        text = viewModel.errorMessage!!,
-                        color = Color.Red,
-                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
-                    )
-                }
+                Text(
+                    text = viewModel.errorMessage!!,
+                    color = Color.Red,
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+                )
             }
 
             if (!viewModel.isLoading && viewModel.gyms.isEmpty() && viewModel.errorMessage == null) {
-                item {
-                    Text(
-                        "No gyms found near you.",
-                        color = LightGray,
-                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)
-                    )
-                }
+                Text(
+                    "No gyms found near you.",
+                    color = LightGray,
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)
+                )
             }
 
-            items(viewModel.gyms) { gym ->
-                Box(modifier = Modifier.padding(horizontal = 20.dp)) {
-                    GymCard(gym) {
-                        viewModel.selectGym(gym)
-                        onNavigateToGymDetails()
+            LazyColumn(
+                modifier = Modifier.weight(1f),
+                contentPadding = PaddingValues(bottom = 16.dp)
+            ) {
+                items(viewModel.gyms) { gym ->
+                    Box(modifier = Modifier.padding(horizontal = 20.dp)) {
+                        GymCard(gym) {
+                            viewModel.selectGym(gym)
+                            onNavigateToGymDetails()
+                        }
                     }
                 }
             }
-
-            item { Spacer(modifier = Modifier.height(16.dp)) }
         }
     }
 }
