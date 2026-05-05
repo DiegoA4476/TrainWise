@@ -13,6 +13,3 @@
 .externalNativeBuild
 .cxx
 local.properties
-
-# Ignore AI configuration file
-app/src/main/java/com/example/trainwise/ui/config/
