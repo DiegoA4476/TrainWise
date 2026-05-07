@@ -47,7 +47,8 @@ fun ProfileScreen(
     onNavigateToBiometrics: () -> Unit,
     onNavigateToSecurity: () -> Unit,
     onNavigateToNotifications: () -> Unit,
-    onNavigateToTrainingHistory: () -> Unit
+    onNavigateToTrainingHistory: () -> Unit,
+    onSignOut: () -> Unit
 ) {
     val auth = FirebaseAuth.getInstance()
     val userId = auth.currentUser?.uid
@@ -298,7 +299,8 @@ fun ProfileScreen(
                     Icons.Outlined.Logout,
                     "Sign Out",
                     textColor = Color.Red,
-                    iconColor = Color.Red
+                    iconColor = Color.Red,
+                    onClick = onSignOut 
                 )
             }
 
@@ -310,6 +312,16 @@ fun ProfileScreen(
 @Composable
 fun StatCard(
     modifier: Modifier = Modifier,
+    icon: ImageVector,
+    value: String,
+    label: String
+) {
+    StatCardLayout(modifier, icon, value, label)
+}
+
+@Composable
+private fun StatCardLayout(
+    modifier: Modifier,
     icon: ImageVector,
     value: String,
     label: String

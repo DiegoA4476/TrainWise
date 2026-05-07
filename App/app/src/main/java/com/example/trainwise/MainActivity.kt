@@ -14,6 +14,7 @@ import androidx.navigation.navArgument
 import com.example.trainwise.ui.screens.*
 import com.example.trainwise.ui.theme.TrainWiseTheme
 import com.example.trainwise.ui.viewmodels.MapViewModel
+import com.google.firebase.auth.FirebaseAuth
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -40,8 +41,12 @@ fun AppNavigation(
     onToggleDarkMode: () -> Unit,
     mapViewModel: MapViewModel
 ) {
+    val auth = FirebaseAuth.getInstance()
+    val startDestination = if (auth.currentUser != null) "home" else "login"
+    
     val navController = rememberNavController()
-    NavHost(navController = navController, startDestination = "login") {
+    
+    NavHost(navController = navController, startDestination = startDestination) {
         composable("login") {
             LoginScreen(
                 onNavigateToSignUp = { navController.navigate("signup") },
@@ -84,7 +89,13 @@ fun AppNavigation(
                 onNavigateToBiometrics = { navController.navigate("biometrics") },
                 onNavigateToSecurity = { navController.navigate("security") },
                 onNavigateToNotifications = { navController.navigate("notifications") },
-                onNavigateToTrainingHistory = { navController.navigate("training_history") }
+                onNavigateToTrainingHistory = { navController.navigate("training_history") },
+                onSignOut = {
+                    auth.signOut()
+                    navController.navigate("login") {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
             )
         }
         composable("guide") {
