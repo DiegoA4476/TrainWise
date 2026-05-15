@@ -10,12 +10,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.outlined.FitnessCenter
-import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.MenuBook
-import androidx.compose.material.icons.outlined.Notifications
-import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,11 +22,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.trainwise.ui.theme.*
-import com.example.trainwise.data.models.Workout
-import com.example.trainwise.ui.viewmodels.WorkoutViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.compose.material.icons.filled.Delete
+import com.example.trainwise.data.models.Workout
+import com.example.trainwise.ui.theme.Orange
+import com.example.trainwise.ui.viewmodels.WorkoutViewModel
 
 @Composable
 fun WorkoutsScreen(
@@ -40,29 +36,22 @@ fun WorkoutsScreen(
     onNavigateToActiveWorkout: (String) -> Unit,
     viewModel: WorkoutViewModel = viewModel()
 ) {
-    LaunchedEffect(Unit) {
-        viewModel.fetchWorkouts()
-    }
-
-    val categories = listOf("All", "Strength", "Cardio", "Yoga", "HIIT", "Flexibility")
+    val categories = remember { listOf("All", "Strength", "Cardio", "Yoga", "HIIT", "Flexibility") }
     var selectedCategory by remember { mutableStateOf("All") }
-
     var workoutToDelete by remember { mutableStateOf<Workout?>(null) }
 
     val workouts by viewModel.workouts
-    val isLoading by viewModel.isLoading
+    val isLoading by viewModel.isLoadingWorkouts
 
-    val filteredWorkouts = if (selectedCategory == "All") {
-        workouts
-    } else {
-        workouts.filter { it.category == selectedCategory }
+    val filteredWorkouts = remember(workouts, selectedCategory) {
+        if (selectedCategory == "All") workouts else workouts.filter { it.category == selectedCategory }
     }
 
     workoutToDelete?.let { workout ->
         AlertDialog(
             onDismissRequest = { workoutToDelete = null },
-            title = { Text("Delete Workout", color = White) },
-            text = { Text("Are you sure you want to delete '${workout.title}'? This action cannot be undone.", color = GrayText) },
+            title = { Text("Delete Workout") },
+            text = { Text("Are you sure you want to delete '${workout.title}'? This action cannot be undone.") },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -75,11 +64,9 @@ fun WorkoutsScreen(
             },
             dismissButton = {
                 TextButton(onClick = { workoutToDelete = null }) {
-                    Text("Cancel", color = GrayText)
+                    Text("Cancel")
                 }
-            },
-            containerColor = CardBackground,
-            shape = RoundedCornerShape(20.dp)
+            }
         )
     }
 
@@ -89,7 +76,7 @@ fun WorkoutsScreen(
             FloatingActionButton(
                 onClick = onNavigateToCreateWorkout,
                 containerColor = Orange,
-                contentColor = White,
+                contentColor = Color.White,
                 shape = CircleShape
             ) {
                 Icon(Icons.Default.Add, contentDescription = "Add Workout")
@@ -102,7 +89,7 @@ fun WorkoutsScreen(
                 onProfileClick = onNavigateProfile
             )
         },
-        containerColor = DarkBackground
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         if (isLoading) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -137,7 +124,7 @@ fun WorkoutsScreen(
                     item {
                         Text(
                             text = if (selectedCategory == "All") "My Routines" else "$selectedCategory Plan",
-                            color = White,
+                            color = MaterialTheme.colorScheme.onBackground,
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)
@@ -147,12 +134,8 @@ fun WorkoutsScreen(
                     items(filteredWorkouts, key = { it.id }) { workout ->
                         WorkoutListItem(
                             workout = workout,
-                            onDelete = {
-                                workoutToDelete = workout
-                            },
-                            onClick = {
-                                onNavigateToActiveWorkout(workout.id)
-                            },
+                            onDelete = { workoutToDelete = workout },
+                            onClick = { onNavigateToActiveWorkout(workout.id) },
                             modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
                         )
                     }
@@ -170,20 +153,22 @@ fun WorkoutsTopBar() {
             Text(
                 "Workouts",
                 fontWeight = FontWeight.Bold,
-                fontSize = 24.sp,
-                color = White
+                fontSize = 24.sp
             )
         },
         actions = {
             IconButton(onClick = { /* Search */ }) {
-                Icon(Icons.Default.Search, "Search", tint = White)
+                Icon(Icons.Default.Search, "Search")
             }
             IconButton(onClick = { /* Notifications */ }) {
-                Icon(Icons.Outlined.Notifications, "Notifications", tint = White)
+                Icon(Icons.Outlined.Notifications, "Notifications")
             }
         },
         colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = DarkBackground
+            containerColor = MaterialTheme.colorScheme.background,
+            titleContentColor = MaterialTheme.colorScheme.onBackground,
+            navigationIconContentColor = MaterialTheme.colorScheme.onBackground,
+            actionIconContentColor = MaterialTheme.colorScheme.onBackground
         )
     )
 }
@@ -196,13 +181,13 @@ fun CategoryChip(
 ) {
     Surface(
         modifier = Modifier.clickable { onSelect() },
-        color = if (isSelected) Orange else CardBackground,
+        color = if (isSelected) Orange else MaterialTheme.colorScheme.surfaceVariant,
         shape = RoundedCornerShape(24.dp),
-        border = if (isSelected) null else androidx.compose.foundation.BorderStroke(1.dp, GrayText.copy(alpha = 0.3f))
+        border = if (isSelected) null else androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f))
     ) {
         Text(
             text = category,
-            color = if (isSelected) White else GrayText,
+            color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
             fontSize = 14.sp
@@ -217,11 +202,11 @@ fun WorkoutListItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Surface(
+    Card(
         modifier = modifier
             .fillMaxWidth()
             .clickable { onClick() },
-        color = CardBackground,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         shape = RoundedCornerShape(20.dp)
     ) {
         Row(
@@ -231,10 +216,18 @@ fun WorkoutListItem(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
                 Box(
-                    modifier = Modifier.size(50.dp).clip(RoundedCornerShape(12.dp)).background(SurfaceColor),
+                    modifier = Modifier
+                        .size(50.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.secondaryContainer),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Outlined.FitnessCenter, null, tint = Orange, modifier = Modifier.size(24.dp))
+                    Icon(
+                        Icons.Outlined.FitnessCenter, 
+                        null, 
+                        tint = Orange, 
+                        modifier = Modifier.size(24.dp)
+                    )
                 }
 
                 Spacer(modifier = Modifier.width(16.dp))
@@ -242,13 +235,13 @@ fun WorkoutListItem(
                 Column {
                     Text(
                         text = workout.title,
-                        color = White,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
                         text = "${workout.exercises.size} Exercises • ${workout.category}",
-                        color = GrayText,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 13.sp
                     )
                 }
@@ -271,7 +264,11 @@ fun EmptyStateView(onAction: () -> Unit) {
         modifier = Modifier.fillMaxWidth().padding(40.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text("No workouts yet", color = GrayText, fontSize = 16.sp)
+        Text(
+            "No workouts yet", 
+            color = MaterialTheme.colorScheme.onSurfaceVariant, 
+            fontSize = 16.sp
+        )
         TextButton(onClick = onAction) {
             Text("Create your first one", color = Orange)
         }
@@ -285,9 +282,9 @@ fun WorkoutsBottomNavigationBar(
     onProfileClick: () -> Unit
 ) {
     NavigationBar(
-        containerColor = Color.Black,
-        contentColor = White,
-        tonalElevation = 0.dp
+        containerColor = MaterialTheme.colorScheme.surface,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        tonalElevation = 8.dp
     ) {
         NavigationBarItem(
             selected = false,
@@ -295,9 +292,11 @@ fun WorkoutsBottomNavigationBar(
             icon = { Icon(Icons.Outlined.Home, null) },
             label = { Text("Home") },
             colors = NavigationBarItemDefaults.colors(
-                unselectedIconColor = White,
-                unselectedTextColor = White,
-                indicatorColor = Orange
+                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                selectedIconColor = MaterialTheme.colorScheme.primary,
+                selectedTextColor = MaterialTheme.colorScheme.primary,
+                indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
             )
         )
         NavigationBarItem(
@@ -306,11 +305,11 @@ fun WorkoutsBottomNavigationBar(
             icon = { Icon(Icons.Outlined.FitnessCenter, null) },
             label = { Text("Workouts") },
             colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = White,
-                selectedTextColor = White,
-                indicatorColor = Orange,
-                unselectedIconColor = White,
-                unselectedTextColor = White
+                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                selectedIconColor = MaterialTheme.colorScheme.primary,
+                selectedTextColor = MaterialTheme.colorScheme.primary,
+                indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
             )
         )
         NavigationBarItem(
@@ -319,9 +318,11 @@ fun WorkoutsBottomNavigationBar(
             icon = { Icon(Icons.Outlined.MenuBook, null) },
             label = { Text("Guide") },
             colors = NavigationBarItemDefaults.colors(
-                unselectedIconColor = White,
-                unselectedTextColor = White,
-                indicatorColor = Orange
+                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                selectedIconColor = MaterialTheme.colorScheme.primary,
+                selectedTextColor = MaterialTheme.colorScheme.primary,
+                indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
             )
         )
         NavigationBarItem(
@@ -330,9 +331,11 @@ fun WorkoutsBottomNavigationBar(
             icon = { Icon(Icons.Outlined.Person, null) },
             label = { Text("Profile") },
             colors = NavigationBarItemDefaults.colors(
-                unselectedIconColor = White,
-                unselectedTextColor = White,
-                indicatorColor = Orange
+                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                selectedIconColor = MaterialTheme.colorScheme.primary,
+                selectedTextColor = MaterialTheme.colorScheme.primary,
+                indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
             )
         )
     }

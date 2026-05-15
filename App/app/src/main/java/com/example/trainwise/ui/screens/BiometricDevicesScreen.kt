@@ -1,6 +1,5 @@
 package com.example.trainwise.ui.screens
 
-import android.util.Log
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -19,79 +18,59 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.trainwise.data.models.Device
 import com.example.trainwise.ui.theme.*
-import com.google.android.gms.wearable.Wearable
-
-data class Device(
-    val id: String,
-    val name: String,
-    val type: String,
-    val isConnected: Boolean,
-    val icon: ImageVector,
-    val isWearOS: Boolean = false
-)
+import com.example.trainwise.ui.viewmodels.BiometricViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BiometricDevicesScreen(
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    viewModel: BiometricViewModel = viewModel()
 ) {
     val context = LocalContext.current
-    var isScanning by remember { mutableStateOf(false) }
-    var devices by remember { mutableStateOf(emptyList<Device>()) }
+    val devices by viewModel.devices
+    val isScanning by viewModel.isScanning
 
-    // Wear OS scanning logic
-    val scanForWearOSDevices = {
-        isScanning = true
-        val nodeClient = Wearable.getNodeClient(context)
-        nodeClient.connectedNodes.addOnSuccessListener { nodes ->
-            val wearOSDevices = nodes.map { node ->
-                Device(
-                    id = node.id,
-                    name = node.displayName,
-                    type = "Wear OS Device",
-                    isConnected = true, // If it's in connectedNodes, it's connected
-                    icon = Icons.Outlined.Watch,
-                    isWearOS = true
-                )
-            }
-            // Merge with existing devices, avoiding duplicates
-            val updatedList = (devices + wearOSDevices).distinctBy { it.id }
-            devices = updatedList
-            isScanning = false
-        }.addOnFailureListener {
-            Log.e("BiometricDevices", "Failed to scan for Wear OS devices", it)
-            isScanning = false
-        }
+    LaunchedEffect(Unit) {
+        viewModel.updateDeviceConnectionStatus(context)
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Biometric Devices", color = White, fontWeight = FontWeight.Bold) },
+                title = { Text("Biometric Devices", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = White)
+                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = DarkBackground)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onBackground
+                )
             )
         },
-        containerColor = DarkBackground,
+        containerColor = MaterialTheme.colorScheme.background,
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { scanForWearOSDevices() },
+                onClick = { viewModel.scanForBiometricDevices(context) },
                 containerColor = Orange,
-                contentColor = DarkBackground,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
                 shape = CircleShape
             ) {
                 if (isScanning) {
-                    CircularProgressIndicator(color = DarkBackground, modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                    CircularProgressIndicator(
+                        color = MaterialTheme.colorScheme.onPrimary, 
+                        modifier = Modifier.size(24.dp), 
+                        strokeWidth = 2.dp
+                    )
                 } else {
                     Icon(Icons.Default.Add, contentDescription = "Scan for Devices")
                 }
@@ -109,10 +88,10 @@ fun BiometricDevicesScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    "Paired Devices",
-                    color = GrayText,
+                    "Connected Devices",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium
                 )
@@ -120,7 +99,11 @@ fun BiometricDevicesScreen(
 
             if (pairedDevices.isEmpty()) {
                 item {
-                    Text("No paired devices found", color = GrayText.copy(alpha = 0.5f), fontSize = 13.sp)
+                    Text(
+                        "No connected devices found", 
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f), 
+                        fontSize = 13.sp
+                    )
                 }
             } else {
                 items(pairedDevices) { device ->
@@ -131,8 +114,8 @@ fun BiometricDevicesScreen(
             item {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    "Available Devices",
-                    color = GrayText,
+                    "Available Nearby",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium
                 )
@@ -140,7 +123,11 @@ fun BiometricDevicesScreen(
 
             if (availableDevices.isEmpty()) {
                 item {
-                    Text("No available devices nearby", color = GrayText.copy(alpha = 0.5f), fontSize = 13.sp)
+                    Text(
+                        "No other devices found", 
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f), 
+                        fontSize = 13.sp
+                    )
                 }
             } else {
                 items(availableDevices) { device ->
@@ -157,17 +144,32 @@ fun BiometricDevicesScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            CircularProgressIndicator(color = Orange, modifier = Modifier.size(32.dp))
+                            CircularProgressIndicator(
+                                color = Orange, 
+                                modifier = Modifier.size(32.dp)
+                            )
                             Spacer(modifier = Modifier.height(12.dp))
-                            Text("Searching for Wear OS devices...", color = GrayText, fontSize = 14.sp)
+                            Text(
+                                "Searching for biometric devices...", 
+                                color = MaterialTheme.colorScheme.onSurfaceVariant, 
+                                fontSize = 14.sp
+                            )
                         }
                     }
                 }
             }
 
             item {
-                Spacer(modifier = Modifier.height(40.dp))
-                InfoNote("Ensure your Wear OS device is paired via the companion app and has TrainWise installed for full functionality.")
+                Spacer(modifier = Modifier.height(24.dp))
+                InfoNote("Biometric Syncing:\n\n" +
+                        "1. Ensure your Watch is connected to the phone.\n" +
+                        "2. Wear your Watch tightly during the session.\n" +
+                        "3. Start a workout on your Watch (e.g. Samsung Health) to enable continuous monitoring.\n" +
+                        "4. TrainWise will automatically sync your heart rate and calories at the end of the workout.")
+            }
+            
+            item {
+                Spacer(modifier = Modifier.height(16.dp))
             }
         }
     }
@@ -177,7 +179,7 @@ fun BiometricDevicesScreen(
 fun DeviceCard(device: Device) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = CardBackground),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         shape = RoundedCornerShape(16.dp),
         border = if (device.isConnected) BorderStroke(1.dp, Orange.copy(alpha = 0.5f)) else null
     ) {
@@ -189,17 +191,31 @@ fun DeviceCard(device: Device) {
                 modifier = Modifier
                     .size(48.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(SurfaceColor),
+                    .background(MaterialTheme.colorScheme.secondaryContainer),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(device.icon, null, tint = Orange, modifier = Modifier.size(24.dp))
+                Icon(
+                    device.icon, 
+                    null, 
+                    tint = Orange, 
+                    modifier = Modifier.size(24.dp)
+                )
             }
 
             Spacer(modifier = Modifier.width(16.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                Text(device.name, color = White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                Text(device.type, color = GrayText, fontSize = 13.sp)
+                Text(
+                    device.name, 
+                    color = MaterialTheme.colorScheme.onSurface, 
+                    fontSize = 16.sp, 
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    device.type, 
+                    color = MaterialTheme.colorScheme.onSurfaceVariant, 
+                    fontSize = 13.sp
+                )
             }
 
             if (device.isConnected) {
@@ -242,10 +258,20 @@ fun InfoNote(text: String) {
             .clip(RoundedCornerShape(12.dp))
             .background(Orange.copy(alpha = 0.05f))
             .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.Top
     ) {
-        Icon(Icons.Outlined.Info, null, tint = Orange, modifier = Modifier.size(20.dp))
+        Icon(
+            Icons.Outlined.Info, 
+            null, 
+            tint = Orange, 
+            modifier = Modifier.size(20.dp).padding(top = 2.dp)
+        )
         Spacer(modifier = Modifier.width(12.dp))
-        Text(text, color = GrayText, fontSize = 12.sp, lineHeight = 18.sp)
+        Text(
+            text, 
+            color = MaterialTheme.colorScheme.onSurfaceVariant, 
+            fontSize = 13.sp, 
+            lineHeight = 20.sp
+        )
     }
 }

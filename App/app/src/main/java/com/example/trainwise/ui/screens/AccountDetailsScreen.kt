@@ -36,8 +36,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.trainwise.ui.components.CustomTextField
 import com.example.trainwise.ui.theme.*
+import com.example.trainwise.ui.viewmodels.UserViewModel
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import java.io.ByteArrayOutputStream
@@ -45,20 +47,22 @@ import java.io.ByteArrayOutputStream
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AccountDetailsScreen(
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    viewModel: UserViewModel = viewModel()
 ) {
+    val userProfile = viewModel.userProfile
     val auth = FirebaseAuth.getInstance()
     val db = FirebaseFirestore.getInstance()
     val userId = auth.currentUser?.uid
     val context = LocalContext.current
 
+    var username by remember(userProfile) { mutableStateOf(userProfile?.username ?: "") }
+    var phone by remember(userProfile) { mutableStateOf(userProfile?.phone ?: "") }
+    var height by remember(userProfile) { mutableStateOf(userProfile?.height ?: "") }
+    var weight by remember(userProfile) { mutableStateOf(userProfile?.weight ?: "") }
     // Estados para los campos
-    var username by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("********") }
-    var phone by remember { mutableStateOf("") }
-    var height by remember { mutableStateOf("") }
-    var weight by remember { mutableStateOf("") }
     var profileImageBase64 by remember { mutableStateOf<String?>(null) }
     var showImageSourceDialog by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(true) }
@@ -100,7 +104,7 @@ fun AccountDetailsScreen(
         bitmap.compress(Bitmap.CompressFormat.JPEG, 60, outputStream)
         val byteArray = outputStream.toByteArray()
         val base64 = Base64.encodeToString(byteArray, Base64.DEFAULT)
-        
+
         userId?.let { id ->
             db.collection("users").document(id)
                 .update("profileImage", base64)
@@ -200,27 +204,33 @@ fun AccountDetailsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Account Details", color = White, fontWeight = FontWeight.Bold) },
+                title = { Text("Account Details", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = White)
+                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
-                    if (isSaving) {
+                    if (viewModel.isSaving) {
                         CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Orange, strokeWidth = 2.dp)
                     } else {
-                        TextButton(onClick = { saveChanges() }) {
+                        TextButton(onClick = {
+                            viewModel.updateAccountDetails(username, phone, height, weight, onNavigateBack)
+                        }) {
                             Text("Save", color = Orange, fontWeight = FontWeight.Bold)
                         }
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = DarkBackground)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onBackground
+                )
             )
         },
-        containerColor = DarkBackground
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
-        if (isLoading) {
+        if (viewModel.isLoading) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = Orange)
             }
@@ -241,7 +251,7 @@ fun AccountDetailsScreen(
                         modifier = Modifier
                             .size(120.dp)
                             .clip(CircleShape)
-                            .background(CardBackground)
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
                             .border(2.dp, Orange, CircleShape)
                             .clickable { showImageSourceDialog = true },
                         contentAlignment = Alignment.Center
@@ -269,7 +279,7 @@ fun AccountDetailsScreen(
                         modifier = Modifier
                             .size(36.dp)
                             .border(2.dp, DarkBackground, CircleShape)
-                        
+
                     ) {
                         Icon(
                             Icons.Outlined.CameraAlt,
@@ -295,16 +305,9 @@ fun AccountDetailsScreen(
                     )
                     InfoField(
                         label = "Email Address",
-                        value = email,
-                        onValueChange = {},
+                        value = userProfile?.email ?: "",
+                        onValueChange = { /* Read only */ },
                         icon = Icons.Outlined.Email
-                    )
-                    InfoField(
-                        label = "Password",
-                        value = password,
-                        onValueChange = { password = it },
-                        icon = Icons.Outlined.Lock,
-                        isPassword = true
                     )
                     InfoField(
                         label = "Phone Number",
@@ -339,7 +342,7 @@ fun AccountDetailsScreen(
                 Spacer(modifier = Modifier.height(40.dp))
 
                 Button(
-                    onClick = { /* Lógica para desactivar */ },
+                    onClick = { /* deactivate logic */ },
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
                     border = BorderStroke(1.dp, Color.Red),
@@ -359,16 +362,27 @@ fun InfoField(
     label: String,
     value: String,
     onValueChange: (String) -> Unit,
-    icon: ImageVector,
-    isPassword: Boolean = false
+    icon: ImageVector
 ) {
     Column {
-        Text(label, color = GrayText, fontSize = 12.sp, modifier = Modifier.padding(start = 4.dp, bottom = 8.dp))
+        Text(
+            text = label,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontSize = 12.sp,
+            modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
+        )
         CustomTextField(
             value = value,
             onValueChange = onValueChange,
             placeholder = label,
-            leadingIcon = { Icon(icon, null, tint = Orange, modifier = Modifier.size(20.dp)) }
+            leadingIcon = {
+                Icon(
+                    icon,
+                    null,
+                    tint = Orange,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
         )
     }
 }

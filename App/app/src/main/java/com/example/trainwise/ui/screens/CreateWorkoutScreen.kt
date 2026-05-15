@@ -23,90 +23,28 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.trainwise.ui.theme.*
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.trainwise.data.models.Exercise
 import com.example.trainwise.data.models.SelectedExercise
 import com.example.trainwise.data.models.Workout
+import com.example.trainwise.ui.theme.Orange
+import com.example.trainwise.ui.viewmodels.WorkoutViewModel
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateWorkoutScreen(
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    viewModel: WorkoutViewModel = viewModel()
 ) {
-
-    val db = FirebaseFirestore.getInstance()
     val auth = FirebaseAuth.getInstance()
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
-
-    val allExercises = listOf(
-        // Chest
-        Exercise(1, "Bench Press", "Chest"),
-        Exercise(2, "Push Ups", "Chest"),
-        Exercise(13, "Incline Bench Press", "Chest"),
-        Exercise(14, "Decline Bench Press", "Chest"),
-        Exercise(15, "Chest Flys", "Chest"),
-        Exercise(16, "Cable Crossover", "Chest"),
-        Exercise(17, "Dips (Chest Focus)", "Chest"),
-
-        // Back
-        Exercise(3, "Pull Ups", "Back"),
-        Exercise(4, "Deadlift", "Back"),
-        Exercise(18, "Lat Pulldowns", "Back"),
-        Exercise(19, "Seated Row", "Back"),
-        Exercise(20, "Bent Over Row", "Back"),
-        Exercise(21, "T-Bar Row", "Back"),
-        Exercise(22, "Hyperextensions", "Back"),
-        Exercise(23, "Single Arm Dumbbell Row", "Back"),
-
-        // Legs
-        Exercise(5, "Squats", "Legs"),
-        Exercise(6, "Lunges", "Legs"),
-        Exercise(24, "Leg Press", "Legs"),
-        Exercise(25, "Leg Extension", "Legs"),
-        Exercise(26, "Leg Curl", "Legs"),
-        Exercise(27, "Calf Raises", "Legs"),
-        Exercise(28, "Romanian Deadlift", "Legs"),
-        Exercise(29, "Bulgarian Split Squats", "Legs"),
-        Exercise(30, "Hack Squats", "Legs"),
-
-        // Shoulders
-        Exercise(7, "Shoulder Press", "Shoulders"),
-        Exercise(8, "Lateral Raises", "Shoulders"),
-        Exercise(31, "Front Raises", "Shoulders"),
-        Exercise(32, "Reverse Flys", "Shoulders"),
-        Exercise(33, "Arnold Press", "Shoulders"),
-        Exercise(34, "Face Pulls", "Shoulders"),
-        Exercise(35, "Upright Row", "Shoulders"),
-
-        // Arms
-        Exercise(9, "Bicep Curls", "Arms"),
-        Exercise(10, "Tricep Dips", "Arms"),
-        Exercise(36, "Hammer Curls", "Arms"),
-        Exercise(37, "Preacher Curls", "Arms"),
-        Exercise(38, "Skull Crushers", "Arms"),
-        Exercise(39, "Overhead Tricep Extension", "Arms"),
-        Exercise(40, "Concentration Curls", "Arms"),
-        Exercise(41, "Tricep Pushdowns", "Arms"),
-
-        // Core
-        Exercise(11, "Plank", "Core"),
-        Exercise(12, "Crunches", "Core"),
-        Exercise(42, "Leg Raises", "Core"),
-        Exercise(43, "Russian Twists", "Core"),
-        Exercise(44, "Mountain Climbers", "Core"),
-        Exercise(45, "Bicycle Crunches", "Core"),
-        Exercise(46, "Dead Bug", "Core"),
-        Exercise(47, "Hanging Leg Raises", "Core")
-    )
-
-    val trainingTypes = listOf("Strength", "Cardio", "Yoga", "HIIT", "Flexibility")
-    val muscleGroups = listOf("All", "Chest", "Back", "Legs", "Shoulders", "Arms", "Core")
+    val allExercises = remember { viewModel.getAllExercises() }
+    val trainingTypes = remember { listOf("Strength", "Cardio", "Yoga", "HIIT", "Flexibility") }
+    val muscleGroups = remember { listOf("All", "Chest", "Back", "Legs", "Shoulders", "Arms", "Core") }
     
     var selectedTrainingType by remember { mutableStateOf("Strength") }
     var selectedMuscleGroup by remember { mutableStateOf("All") }
@@ -115,15 +53,10 @@ fun CreateWorkoutScreen(
     var restTime by remember { mutableIntStateOf(60) }
     var selectedExercises by remember { mutableStateOf(listOf<SelectedExercise>()) }
 
-
-
-    val saveWorkout = {
+    val handleSaveWorkout = {
         val currentUser = auth.currentUser
         if (currentUser != null && workoutName.isNotBlank() && selectedExercises.isNotEmpty()) {
-            val workoutId = db.collection("workouts").document().id // Generate unique ID
-
             val newWorkout = Workout(
-                id = workoutId,
                 userId = currentUser.uid,
                 title = workoutName,
                 category = selectedTrainingType,
@@ -131,27 +64,20 @@ fun CreateWorkoutScreen(
                 restTime = restTime
             )
 
-            db.collection("workouts").document(workoutId)
-                .set(newWorkout)
-                .addOnSuccessListener {
+            viewModel.saveWorkout(
+                workout = newWorkout,
+                onSuccess = {
                     scope.launch {
-
-                        snackbarHostState.showSnackbar(
-                            message = "Workout '$workoutName' saved successfully! ",
-                            duration = SnackbarDuration.Short
-                        )
-                        delay(10)
+                        snackbarHostState.showSnackbar("Workout '$workoutName' saved successfully!")
                         onNavigateBack()
                     }
-                }
-                .addOnFailureListener { e ->
+                },
+                onError = { error ->
                     scope.launch {
-                        snackbarHostState.showSnackbar(
-                            message = "Error: ${e.message ?: "Could not save workout"}",
-                            duration = SnackbarDuration.Short
-                        )
+                        snackbarHostState.showSnackbar("Error: $error")
                     }
                 }
+            )
         }
     }
 
@@ -165,8 +91,8 @@ fun CreateWorkoutScreen(
             SnackbarHost(hostState = snackbarHostState) { data ->
                 Snackbar(
                     snackbarData = data,
-                    containerColor = CardBackground,
-                    contentColor = White,
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    contentColor = MaterialTheme.colorScheme.onSurface,
                     actionColor = Orange,
                     shape = RoundedCornerShape(12.dp)
                 )
@@ -174,28 +100,33 @@ fun CreateWorkoutScreen(
         },
         topBar = {
             TopAppBar(
-                title = { Text("Create Workout", color = White, fontWeight = FontWeight.Bold) },
+                title = { Text("Create Workout", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = White)
+                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
+                    val canSave = workoutName.isNotBlank() && selectedExercises.isNotEmpty()
                     TextButton(
-                        onClick = { saveWorkout() },
-                        enabled = workoutName.isNotBlank() && selectedExercises.isNotEmpty() // Validation
+                        onClick = { handleSaveWorkout() },
+                        enabled = canSave
                     ) {
                         Text(
                             "Save",
-                            color = if (workoutName.isNotBlank() && selectedExercises.isNotEmpty()) Orange else GrayText,
+                            color = if (canSave) Orange else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
                             fontWeight = FontWeight.Bold
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = DarkBackground)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onBackground
+                )
             )
         },
-        containerColor = DarkBackground
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         Column(
             modifier = Modifier
@@ -208,27 +139,31 @@ fun CreateWorkoutScreen(
                 verticalArrangement = Arrangement.spacedBy(20.dp),
                 contentPadding = PaddingValues(bottom = 20.dp)
             ) {
-
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                         Spacer(modifier = Modifier.height(8.dp))
                         OutlinedTextField(
                             value = workoutName,
                             onValueChange = { workoutName = it },
-                            label = { Text("Workout Name", color = GrayText) },
+                            label = { Text("Workout Name", color = MaterialTheme.colorScheme.onSurfaceVariant) },
                             modifier = Modifier.fillMaxWidth(),
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedTextColor = White,
-                                unfocusedTextColor = White,
+                                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
                                 focusedBorderColor = Orange,
-                                unfocusedBorderColor = GrayText.copy(alpha = 0.5f),
+                                unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                                 cursorColor = Orange
                             ),
                             shape = RoundedCornerShape(12.dp),
                             singleLine = true
                         )
 
-                        Text("Training Type", color = White, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                        Text(
+                            "Training Type", 
+                            color = MaterialTheme.colorScheme.onBackground, 
+                            fontSize = 14.sp, 
+                            fontWeight = FontWeight.Medium
+                        )
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             items(trainingTypes) { type ->
                                 FilterChip(
@@ -237,16 +172,21 @@ fun CreateWorkoutScreen(
                                     label = { Text(type) },
                                     colors = FilterChipDefaults.filterChipColors(
                                         selectedContainerColor = Orange,
-                                        selectedLabelColor = White,
-                                        containerColor = CardBackground,
-                                        labelColor = GrayText
+                                        selectedLabelColor = Color.White,
+                                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                        labelColor = MaterialTheme.colorScheme.onSurfaceVariant
                                     ),
                                     border = null
                                 )
                             }
                         }
 
-                        Text("Rest Time Between Sets", color = White, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                        Text(
+                            "Rest Time Between Sets", 
+                            color = MaterialTheme.colorScheme.onBackground, 
+                            fontSize = 14.sp, 
+                            fontWeight = FontWeight.Medium
+                        )
                         CounterItem(
                             label = "Seconds",
                             value = restTime,
@@ -256,27 +196,44 @@ fun CreateWorkoutScreen(
                     }
                 }
 
-                // Section: Add Exercises (Redesigned to be compact)
                 item {
                     Card(
-                        colors = CardDefaults.cardColors(containerColor = CardBackground),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                         shape = RoundedCornerShape(16.dp)
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
-                            Text("Add Exercises", color = White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                            Text(
+                                "Add Exercises", 
+                                color = MaterialTheme.colorScheme.onSurface, 
+                                fontSize = 16.sp, 
+                                fontWeight = FontWeight.Bold
+                            )
                             Spacer(modifier = Modifier.height(12.dp))
                             
                             OutlinedTextField(
                                 value = searchQuery,
                                 onValueChange = { searchQuery = it },
-                                placeholder = { Text("Search...", color = GrayText, fontSize = 14.sp) },
+                                placeholder = { 
+                                    Text(
+                                        "Search...", 
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f), 
+                                        fontSize = 14.sp
+                                    ) 
+                                },
                                 modifier = Modifier.fillMaxWidth().height(50.dp),
-                                leadingIcon = { Icon(Icons.Outlined.Search, null, tint = GrayText, modifier = Modifier.size(20.dp)) },
+                                leadingIcon = { 
+                                    Icon(
+                                        Icons.Outlined.Search, 
+                                        null, 
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant, 
+                                        modifier = Modifier.size(20.dp)
+                                    ) 
+                                },
                                 colors = OutlinedTextFieldDefaults.colors(
-                                    focusedTextColor = White,
-                                    unfocusedTextColor = White,
+                                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
                                     focusedBorderColor = Orange,
-                                    unfocusedBorderColor = GrayText.copy(alpha = 0.5f)
+                                    unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                                 ),
                                 shape = RoundedCornerShape(10.dp),
                                 singleLine = true
@@ -289,19 +246,29 @@ fun CreateWorkoutScreen(
                                     Box(
                                         modifier = Modifier
                                             .clip(RoundedCornerShape(8.dp))
-                                            .background(if (selectedMuscleGroup == group) Orange.copy(alpha = 0.2f) else SurfaceColor)
-                                            .border(1.dp, if (selectedMuscleGroup == group) Orange else Color.Transparent, RoundedCornerShape(8.dp))
+                                            .background(
+                                                if (selectedMuscleGroup == group) Orange.copy(alpha = 0.2f) 
+                                                else MaterialTheme.colorScheme.secondaryContainer
+                                            )
+                                            .border(
+                                                1.dp, 
+                                                if (selectedMuscleGroup == group) Orange else Color.Transparent, 
+                                                RoundedCornerShape(8.dp)
+                                            )
                                             .clickable { selectedMuscleGroup = group }
                                             .padding(horizontal = 12.dp, vertical = 6.dp)
                                     ) {
-                                        Text(group, color = if (selectedMuscleGroup == group) Orange else GrayText, fontSize = 12.sp)
+                                        Text(
+                                            group, 
+                                            color = if (selectedMuscleGroup == group) Orange else MaterialTheme.colorScheme.onSurfaceVariant, 
+                                            fontSize = 12.sp
+                                        )
                                     }
                                 }
                             }
                             
                             Spacer(modifier = Modifier.height(12.dp))
                             
-                            // Horizontal results to save vertical space
                             LazyRow(
                                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                                 modifier = Modifier.height(60.dp)
@@ -312,7 +279,7 @@ fun CreateWorkoutScreen(
                                             .width(140.dp)
                                             .fillMaxHeight()
                                             .clip(RoundedCornerShape(10.dp))
-                                            .background(SurfaceColor)
+                                            .background(MaterialTheme.colorScheme.secondaryContainer)
                                             .clickable {
                                                 if (!selectedExercises.any { it.exercise.id == exercise.id }) {
                                                     selectedExercises = selectedExercises + SelectedExercise(exercise)
@@ -323,10 +290,25 @@ fun CreateWorkoutScreen(
                                     ) {
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             Column(modifier = Modifier.weight(1f)) {
-                                                Text(exercise.name, color = White, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-                                                Text(exercise.muscleGroup, color = GrayText, fontSize = 10.sp)
+                                                Text(
+                                                    exercise.name, 
+                                                    color = MaterialTheme.colorScheme.onSurface, 
+                                                    fontSize = 12.sp, 
+                                                    fontWeight = FontWeight.Bold, 
+                                                    maxLines = 1
+                                                )
+                                                Text(
+                                                    exercise.muscleGroup, 
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant, 
+                                                    fontSize = 10.sp
+                                                )
                                             }
-                                            Icon(Icons.Default.Add, null, tint = Orange, modifier = Modifier.size(16.dp))
+                                            Icon(
+                                                Icons.Default.Add, 
+                                                null, 
+                                                tint = Orange, 
+                                                modifier = Modifier.size(16.dp)
+                                            )
                                         }
                                     }
                                 }
@@ -335,14 +317,18 @@ fun CreateWorkoutScreen(
                     }
                 }
 
-                // Section: Selected Exercises (Main emphasis)
                 item {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Your Workout Plan", color = White, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
+                        Text(
+                            "Your Workout Plan", 
+                            color = MaterialTheme.colorScheme.onBackground, 
+                            fontSize = 18.sp, 
+                            fontWeight = FontWeight.ExtraBold
+                        )
                         Surface(
                             color = Orange.copy(alpha = 0.1f),
                             shape = CircleShape
@@ -378,7 +364,11 @@ fun CreateWorkoutScreen(
                             modifier = Modifier.fillMaxWidth().height(100.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text("No exercises added yet", color = GrayText, fontSize = 14.sp)
+                            Text(
+                                "No exercises added yet", 
+                                color = MaterialTheme.colorScheme.onSurfaceVariant, 
+                                fontSize = 14.sp
+                            )
                         }
                     }
                 }
@@ -395,9 +385,12 @@ fun SelectedExerciseCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = CardBackground),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         shape = RoundedCornerShape(20.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, GrayText.copy(alpha = 0.1f))
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp, 
+            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
+        )
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -406,14 +399,32 @@ fun SelectedExerciseCard(
                 verticalAlignment = Alignment.Top
             ) {
                 Column {
-                    Text(selected.exercise.name, color = White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                    Text(selected.exercise.muscleGroup, color = Orange, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                    Text(
+                        selected.exercise.name, 
+                        color = MaterialTheme.colorScheme.onSurface, 
+                        fontSize = 18.sp, 
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        selected.exercise.muscleGroup, 
+                        color = Orange, 
+                        fontSize = 12.sp, 
+                        fontWeight = FontWeight.Medium
+                    )
                 }
                 IconButton(
                     onClick = onRemove,
-                    modifier = Modifier.size(32.dp).clip(CircleShape).background(Color.Red.copy(alpha = 0.1f))
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(Color.Red.copy(alpha = 0.1f))
                 ) {
-                    Icon(Icons.Default.Remove, null, tint = Color.Red, modifier = Modifier.size(18.dp))
+                    Icon(
+                        Icons.Default.Remove, 
+                        null, 
+                        tint = Color.Red, 
+                        modifier = Modifier.size(18.dp)
+                    )
                 }
             }
             
@@ -448,13 +459,18 @@ fun CounterItem(
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier) {
-        Text(label, color = GrayText, fontSize = 12.sp, modifier = Modifier.padding(start = 4.dp, bottom = 4.dp))
+        Text(
+            label, 
+            color = MaterialTheme.colorScheme.onSurfaceVariant, 
+            fontSize = 12.sp, 
+            modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)
+        )
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(12.dp))
-                .background(SurfaceColor)
+                .background(MaterialTheme.colorScheme.secondaryContainer)
                 .padding(4.dp),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
@@ -462,12 +478,17 @@ fun CounterItem(
                 onClick = { if (value > 1) onValueChange(value - 1) },
                 modifier = Modifier.size(32.dp)
             ) {
-                Icon(Icons.Default.Remove, null, tint = White, modifier = Modifier.size(16.dp))
+                Icon(
+                    Icons.Default.Remove, 
+                    null, 
+                    tint = MaterialTheme.colorScheme.onSurface, 
+                    modifier = Modifier.size(16.dp)
+                )
             }
             
             Text(
                 text = value.toString(),
-                color = White,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.ExtraBold
             )
@@ -476,7 +497,12 @@ fun CounterItem(
                 onClick = { onValueChange(value + 1) },
                 modifier = Modifier.size(32.dp)
             ) {
-                Icon(Icons.Default.Add, null, tint = White, modifier = Modifier.size(16.dp))
+                Icon(
+                    Icons.Default.Add, 
+                    null, 
+                    tint = MaterialTheme.colorScheme.onSurface, 
+                    modifier = Modifier.size(16.dp)
+                )
             }
         }
     }

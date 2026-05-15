@@ -11,7 +11,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.trainwise"
-        minSdk = 24
+        minSdk = 26
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
@@ -49,10 +49,10 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
-    implementation(libs.androidx.material.icons.extended)
-    implementation(libs.androidx.appcompat)
     implementation(libs.material)
+    implementation(libs.androidx.material.icons.extended)
     implementation(libs.androidx.navigation.compose)
+    
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -61,34 +61,37 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 
-
     // Google Maps
     implementation("com.google.maps.android:maps-compose:4.3.3")
     implementation("com.google.android.gms:play-services-maps:18.2.0")
 
-    //  (Fused Location Provider)
+    // Location
     implementation("com.google.android.gms:play-services-location:21.1.0")
 
-    //(GPS)
+    // Permissions
     implementation("com.google.accompanist:accompanist-permissions:0.34.0")
 
+    // Network
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
     
     // Image loading
     implementation("io.coil-kt:coil-compose:2.5.0")
 
-    // Wear OS integration
-    implementation("com.google.android.gms:play-services-wearable:18.1.0")
+    // Health Connect
+    implementation("androidx.health.connect:connect-client:1.1.0-alpha11")
 
+    // Wear OS
+    implementation(libs.play.services.wearable)
+
+    // Firebase
     implementation(platform("com.google.firebase:firebase-bom:34.11.0"))
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-firestore")
 
-    // SDK de Google AI para Gemini
+    // Gemini AI
     implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
-    // Ensure you have the lifecycle ktx for viewModelScope
+
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
-
 }

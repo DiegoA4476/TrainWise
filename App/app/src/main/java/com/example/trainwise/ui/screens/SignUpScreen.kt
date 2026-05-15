@@ -24,76 +24,39 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.trainwise.ui.components.CustomTextField
 import com.example.trainwise.ui.theme.*
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseAuthWeakPasswordException
-import com.google.firebase.auth.userProfileChangeRequest
-import com.google.firebase.firestore.FirebaseFirestore
+import com.example.trainwise.ui.viewmodels.AuthViewModel
 
 @Composable
-fun SignUpScreen(onNavigateToLogin: () -> Unit) {
-    val auth = FirebaseAuth.getInstance()
-    val db = FirebaseFirestore.getInstance()
-
+fun SignUpScreen(
+    onNavigateToLogin: () -> Unit,
+    viewModel: AuthViewModel = viewModel()
+) {
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
-    var isLoading by remember { mutableStateOf(false) }
+    var validationError by remember { mutableStateOf<String?>(null) }
 
     val handleSignUp: () -> Unit = {
         if (name.isBlank() || email.isBlank() || password.isBlank()) {
-            errorMessage = "Please fill in all fields"
+            validationError = "Please fill in all fields"
         } else if (password != confirmPassword) {
-            errorMessage = "Passwords do not match"
+            validationError = "Passwords do not match"
         } else {
-            isLoading = true
-            auth.createUserWithEmailAndPassword(email, password)
-                .addOnCompleteListener { task ->
-                    if (task.isSuccessful) {
-                        val user = auth.currentUser
-                        val userId = user?.uid ?: ""
-
-                        val profileUpdates = userProfileChangeRequest { displayName = name }
-                        user?.updateProfile(profileUpdates)
-
-                        val userProfile = hashMapOf(
-                            "uid" to userId,
-                            "username" to name,
-                            "email" to email,
-                            "phone" to "",
-                            "height" to "",
-                            "weight" to ""
-                        )
-
-                        db.collection("users").document(userId)
-                            .set(userProfile)
-                            .addOnSuccessListener {
-                                isLoading = false
-                                onNavigateToLogin()
-                            }
-                            .addOnFailureListener { e ->
-                                isLoading = false
-                                errorMessage = "Error saving data: ${e.message}"
-                            }
-                    } else {
-                        isLoading = false
-                        val exception = task.exception
-                        errorMessage = when (exception) {
-                            is FirebaseAuthWeakPasswordException -> "Password is too weak"
-                            else -> exception?.message ?: "Registration failed"
-                        }
-                    }
-                }
+            validationError = null
+            viewModel.signUp(name, email, password, onNavigateToLogin)
         }
     }
+
+    val displayError = validationError ?: viewModel.errorMessage
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(DarkBackground)
+            .background(MaterialTheme.colorScheme.background)
             .padding(horizontal = 40.dp, vertical = 60.dp)
             .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.Start
@@ -102,7 +65,7 @@ fun SignUpScreen(onNavigateToLogin: () -> Unit) {
 
         Text(
             text = buildAnnotatedString {
-                withStyle(style = SpanStyle(color = White, fontWeight = FontWeight.Bold, fontSize = 48.sp)) {
+                withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Bold, fontSize = 48.sp)) {
                     append("Join\n")
                 }
                 withStyle(style = SpanStyle(color = Orange, fontWeight = FontWeight.Bold, fontSize = 56.sp)) {
@@ -114,57 +77,85 @@ fun SignUpScreen(onNavigateToLogin: () -> Unit) {
 
         Spacer(modifier = Modifier.height(40.dp))
 
-        Text(text = "Full Name", color = White, fontSize = 18.sp, modifier = Modifier.padding(bottom = 4.dp))
+        Text(text = "Full Name", color = MaterialTheme.colorScheme.onBackground, fontSize = 18.sp, modifier = Modifier.padding(bottom = 4.dp))
         CustomTextField(
             value = name,
-            onValueChange = { name = it; errorMessage = null },
+            onValueChange = { name = it; viewModel.clearError(); },
             placeholder = "Enter your name",
             imeAction = ImeAction.Next,
-            leadingIcon = { Icon(Icons.Outlined.Person, null, tint = White, modifier = Modifier.size(28.dp)) }
+            leadingIcon = { 
+                Icon(
+                    imageVector = Icons.Outlined.Person, 
+                    contentDescription = null, 
+                    tint = MaterialTheme.colorScheme.onBackground, 
+                    modifier = Modifier.size(28.dp)
+                ) 
+            }
         )
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        Text(text = "Email", color = White, fontSize = 18.sp, modifier = Modifier.padding(bottom = 4.dp))
+        Text(text = "Email", color = MaterialTheme.colorScheme.onBackground, fontSize = 18.sp, modifier = Modifier.padding(bottom = 4.dp))
         CustomTextField(
             value = email,
-            onValueChange = { email = it; errorMessage = null },
+            onValueChange = { email = it; viewModel.clearError(); },
             placeholder = "Enter your email",
             keyboardType = KeyboardType.Email,
             imeAction = ImeAction.Next,
-            leadingIcon = { Icon(Icons.Outlined.Email, null, tint = White, modifier = Modifier.size(28.dp)) }
+            leadingIcon = { 
+                Icon(
+                    imageVector = Icons.Outlined.Email, 
+                    contentDescription = null, 
+                    tint = MaterialTheme.colorScheme.onBackground, 
+                    modifier = Modifier.size(28.dp)
+                ) 
+            }
         )
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        Text(text = "Password", color = White, fontSize = 18.sp, modifier = Modifier.padding(bottom = 4.dp))
+        Text(text = "Password", color = MaterialTheme.colorScheme.onBackground, fontSize = 18.sp, modifier = Modifier.padding(bottom = 4.dp))
         CustomTextField(
             value = password,
-            onValueChange = { password = it; errorMessage = null },
+            onValueChange = { password = it; viewModel.clearError(); },
             placeholder = "Create password",
             visualTransformation = PasswordVisualTransformation(),
             keyboardType = KeyboardType.Password,
             imeAction = ImeAction.Next,
-            leadingIcon = { Icon(Icons.Outlined.Lock, null, tint = White, modifier = Modifier.size(28.dp)) }
+            leadingIcon = { 
+                Icon(
+                    imageVector = Icons.Outlined.Lock, 
+                    contentDescription = null, 
+                    tint = MaterialTheme.colorScheme.onBackground, 
+                    modifier = Modifier.size(28.dp)
+                ) 
+            }
         )
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        Text(text = "Confirm Password", color = White, fontSize = 18.sp, modifier = Modifier.padding(bottom = 4.dp))
+        Text(text = "Confirm Password", color = MaterialTheme.colorScheme.onBackground, fontSize = 18.sp, modifier = Modifier.padding(bottom = 4.dp))
         CustomTextField(
             value = confirmPassword,
-            onValueChange = { confirmPassword = it; errorMessage = null },
+            onValueChange = { confirmPassword = it; viewModel.clearError(); },
             placeholder = "Confirm password",
             visualTransformation = PasswordVisualTransformation(),
             keyboardType = KeyboardType.Password,
             imeAction = ImeAction.Done,
             keyboardActions = KeyboardActions(onDone = { handleSignUp() }),
-            leadingIcon = { Icon(Icons.Outlined.Lock, null, tint = White, modifier = Modifier.size(28.dp)) }
+            leadingIcon = { 
+                Icon(
+                    imageVector = Icons.Outlined.Lock, 
+                    contentDescription = null, 
+                    tint = MaterialTheme.colorScheme.onBackground, 
+                    modifier = Modifier.size(28.dp)
+                ) 
+            }
         )
 
-        if (errorMessage != null) {
+        if (displayError != null) {
             Spacer(modifier = Modifier.height(16.dp))
-            Text(text = errorMessage!!, color = Color.Red, fontSize = 14.sp)
+            Text(text = displayError, color = Color.Red, fontSize = 14.sp)
         }
 
         Spacer(modifier = Modifier.height(32.dp))
@@ -172,14 +163,17 @@ fun SignUpScreen(onNavigateToLogin: () -> Unit) {
         Button(
             onClick = handleSignUp,
             modifier = Modifier.fillMaxWidth().height(70.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Orange),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Orange,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            ),
             shape = RoundedCornerShape(35.dp),
-            enabled = !isLoading
+            enabled = !viewModel.isLoading
         ) {
-            if (isLoading) {
-                CircularProgressIndicator(color = White, modifier = Modifier.size(24.dp))
+            if (viewModel.isLoading) {
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(24.dp))
             } else {
-                Text(text = "SIGN UP", color = White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Text(text = "SIGN UP", fontSize = 18.sp, fontWeight = FontWeight.Bold)
             }
         }
 
@@ -191,7 +185,7 @@ fun SignUpScreen(onNavigateToLogin: () -> Unit) {
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(text = "Already a member? ", color = White, fontSize = 16.sp)
+            Text(text = "Already a member? ", color = MaterialTheme.colorScheme.onBackground, fontSize = 16.sp)
             TextButton(onClick = onNavigateToLogin) {
                 Text(text = "Login", color = Orange, fontSize = 16.sp, fontWeight = FontWeight.Bold)
             }

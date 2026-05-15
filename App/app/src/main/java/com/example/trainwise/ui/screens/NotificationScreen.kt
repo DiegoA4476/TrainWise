@@ -81,16 +81,20 @@ fun NotificationScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Notifications", color = White, fontWeight = FontWeight.Bold) },
+                title = { Text("Notifications", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Outlined.ArrowBack, contentDescription = "Back", tint = White)
+                        Icon(Icons.Outlined.ArrowBack, contentDescription = "Back")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = DarkBackground)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onBackground
+                )
             )
         },
-        containerColor = DarkBackground
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         Column(
             modifier = Modifier
@@ -103,7 +107,7 @@ fun NotificationScreen(
             // Toggle Row
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = CardBackground),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Row(
@@ -122,7 +126,7 @@ fun NotificationScreen(
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
                             "Enable Notifications",
-                            color = White,
+                            color = MaterialTheme.colorScheme.onSurface,
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Medium
                         )
@@ -131,11 +135,11 @@ fun NotificationScreen(
                         checked = notificationsEnabled,
                         onCheckedChange = { notificationsEnabled = it },
                         colors = SwitchDefaults.colors(
-                            checkedThumbColor = White,
+                            checkedThumbColor = Color.White,
                             checkedTrackColor = Orange,
-                            uncheckedThumbColor = GrayText,
-                            uncheckedTrackColor = CardBackground,
-                            uncheckedBorderColor = GrayText
+                            uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+                            uncheckedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     )
                 }
@@ -148,7 +152,7 @@ fun NotificationScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp)
-                    .background(CardBackground, RoundedCornerShape(24.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(24.dp))
                     .padding(4.dp)
             ) {
                 TabButton(
@@ -172,7 +176,7 @@ fun NotificationScreen(
                 
                 if (currentList.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("No notifications yet", color = GrayText)
+                        Text("No notifications yet", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 } else {
                     LazyColumn(
@@ -195,13 +199,13 @@ fun NotificationScreen(
                         Icon(
                             Icons.Outlined.NotificationsOff,
                             contentDescription = null,
-                            tint = GrayText.copy(alpha = 0.3f),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
                             modifier = Modifier.size(80.dp)
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
                             "Notifications are turned off",
-                            color = GrayText,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 16.sp
                         )
                     }
@@ -230,7 +234,7 @@ fun TabButton(
     ) {
         Text(
             text = text,
-            color = if (isSelected) White else GrayText,
+            color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
             fontSize = 14.sp
         )
@@ -241,7 +245,7 @@ fun TabButton(
 fun NotificationCard(notification: NotificationItem) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = CardBackground),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         shape = RoundedCornerShape(16.dp)
     ) {
         Row(
@@ -267,20 +271,20 @@ fun NotificationCard(notification: NotificationItem) {
                 ) {
                     Text(
                         notification.title,
-                        color = White,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
                         notification.time,
-                        color = GrayText,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 12.sp
                     )
                 }
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     notification.message,
-                    color = GrayText,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 14.sp,
                     lineHeight = 20.sp
                 )

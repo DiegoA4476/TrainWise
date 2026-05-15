@@ -6,5 +6,6 @@ data class UserProfile(
     val email: String = "",
     val phone: String = "",
     val height: String = "",
-    val weight: String = ""
+    val weight: String = "",
+    val profileImage: String? = null
 )

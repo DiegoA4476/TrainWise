@@ -58,16 +58,15 @@ fun GymDetailsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(gym.name, color = White, fontWeight = FontWeight.Bold, maxLines = 1) },
+                title = { Text(gym.name, fontWeight = FontWeight.Bold, maxLines = 1) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", tint = White)
+                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back")
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = DarkBackground)
+                }
             )
         },
-        containerColor = DarkBackground
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         Column(
             modifier = Modifier
@@ -94,7 +93,7 @@ fun GymDetailsScreen(
                             .fillMaxSize()
                             .background(
                                 brush = Brush.verticalGradient(
-                                    colors = listOf(Orange.copy(alpha = 0.8f), DarkBackground)
+                                    colors = listOf(Orange.copy(alpha = 0.8f), MaterialTheme.colorScheme.background)
                                 )
                             ),
                         contentAlignment = Alignment.Center
@@ -113,7 +112,7 @@ fun GymDetailsScreen(
                         .fillMaxSize()
                         .background(
                             brush = Brush.verticalGradient(
-                                colors = listOf(Color.Transparent, DarkBackground.copy(alpha = 0.7f)),
+                                colors = listOf(Color.Transparent, MaterialTheme.colorScheme.background.copy(alpha = 0.7f)),
                                 startY = 300f
                             )
                         )
@@ -128,14 +127,14 @@ fun GymDetailsScreen(
                 // Info Card
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = CardBackground),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                     shape = RoundedCornerShape(24.dp),
                     elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
                 ) {
                     Column(modifier = Modifier.padding(24.dp)) {
                         Text(
                             text = gym.name,
-                            color = White,
+                            color = MaterialTheme.colorScheme.onSurface,
                             fontSize = 24.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -143,13 +142,13 @@ fun GymDetailsScreen(
                             Icon(Icons.Filled.Star, null, tint = Orange, modifier = Modifier.size(18.dp))
                             Text(
                                 text = " ${gym.rating} • Gym & Fitness Center",
-                                color = GrayText,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontSize = 15.sp
                             )
                         }
 
                         Spacer(modifier = Modifier.height(24.dp))
-                        HorizontalDivider(color = White.copy(alpha = 0.1f))
+                        HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
                         Spacer(modifier = Modifier.height(24.dp))
 
                         InfoRow(Icons.Outlined.LocationOn, "Address", gym.address)
@@ -169,7 +168,7 @@ fun GymDetailsScreen(
                 // Reviews Section
                 Text(
                     "Reviews",
-                    color = White,
+                    color = MaterialTheme.colorScheme.onBackground,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(bottom = 16.dp)
@@ -200,9 +199,9 @@ fun GymDetailsScreen(
                     colors = ButtonDefaults.buttonColors(containerColor = Orange),
                     shape = RoundedCornerShape(16.dp)
                 ) {
-                    Icon(Icons.Outlined.Directions, null, tint = White)
+                    Icon(Icons.Outlined.Directions, null, tint = Color.White)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Get Directions", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text("Get Directions", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color.White)
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -229,9 +228,9 @@ fun GymDetailsScreen(
 fun ReviewItem(review: Review) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = CardBackground),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(1.dp, White.copy(alpha = 0.05f))
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -259,8 +258,8 @@ fun ReviewItem(review: Review) {
                     }
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
-                        Text(review.authorName, color = White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                        Text(review.timeAgo, color = GrayText, fontSize = 11.sp)
+                        Text(review.authorName, color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                        Text(review.timeAgo, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
                     }
                 }
                 Row {
@@ -268,7 +267,7 @@ fun ReviewItem(review: Review) {
                         Icon(
                             imageVector = Icons.Filled.Star,
                             contentDescription = null,
-                            tint = if (index < review.rating) Orange else GrayText.copy(alpha = 0.3f),
+                            tint = if (index < review.rating) Orange else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
                             modifier = Modifier.size(14.dp)
                         )
                     }
@@ -277,7 +276,7 @@ fun ReviewItem(review: Review) {
             Spacer(modifier = Modifier.height(12.dp))
             Text(
                 text = review.text,
-                color = GrayText,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 13.sp,
                 lineHeight = 18.sp
             )
@@ -289,7 +288,7 @@ fun ReviewItem(review: Review) {
 fun InfoRow(icon: ImageVector, label: String, value: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Surface(
-            color = SurfaceColor,
+            color = MaterialTheme.colorScheme.secondaryContainer,
             shape = CircleShape,
             modifier = Modifier.size(40.dp)
         ) {
@@ -299,8 +298,8 @@ fun InfoRow(icon: ImageVector, label: String, value: String) {
         }
         Spacer(modifier = Modifier.width(16.dp))
         Column {
-            Text(label, color = GrayText, fontSize = 12.sp)
-            Text(value, color = White, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+            Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+            Text(value, color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp, fontWeight = FontWeight.Medium)
         }
     }
 }

@@ -11,16 +11,19 @@ import com.google.ai.client.generativeai.GenerativeModel
 import com.google.ai.client.generativeai.type.content
 import kotlinx.coroutines.launch
 import com.example.trainwise.ui.config.AiConfig
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
 import com.example.trainwise.data.models.UserProfile
 import com.example.trainwise.data.models.Workout
 import com.example.trainwise.data.models.SelectedExercise
 import com.example.trainwise.data.models.Exercise
+import com.example.trainwise.data.repositories.UserRepository
+import com.example.trainwise.data.repositories.WorkoutRepository
+import com.google.firebase.auth.FirebaseAuth
 import org.json.JSONObject
 
-class GuideViewModel : ViewModel() {
-    private val db = FirebaseFirestore.getInstance()
+class GuideViewModel(
+    private val userRepository: UserRepository = UserRepository(),
+    private val workoutRepository: WorkoutRepository = WorkoutRepository()
+) : ViewModel() {
     private val auth = FirebaseAuth.getInstance()
 
     private val generativeModel = GenerativeModel(
@@ -43,15 +46,13 @@ class GuideViewModel : ViewModel() {
     }
 
     private fun loadUserProfile() {
-        val uid = auth.currentUser?.uid ?: return
-        db.collection("users").document(uid).get()
-            .addOnSuccessListener { doc ->
-                userData = doc.toObject(UserProfile::class.java)
-                if (chatMessages.isEmpty()) {
-                    val name = userData?.username ?: "Athlete"
-                    chatMessages.add(Message("Hello $name! I'm WiseBot. Ready to crush your workout today?", false))
-                }
+        viewModelScope.launch {
+            userData = userRepository.getUserProfile()
+            if (chatMessages.isEmpty()) {
+                val name = userData?.username ?: "Athlete"
+                chatMessages.add(Message("Hello $name! I'm WiseBot. Ready to crush your workout today?", false))
             }
+        }
     }
 
     fun sendMessage(userText: String) {
@@ -87,7 +88,7 @@ class GuideViewModel : ViewModel() {
         }
     }
 
-    fun importWorkout(jsonString: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
+    suspend fun importWorkout(jsonString: String, onSuccess: () -> Unit, onError: (String) -> Unit) {
         try {
             val userId = auth.currentUser?.uid ?: return
             val json = JSONObject(jsonString)
@@ -110,9 +111,7 @@ class GuideViewModel : ViewModel() {
                 )
             }
 
-            val workoutId = db.collection("workouts").document().id
             val workout = Workout(
-                id = workoutId,
                 userId = userId,
                 title = json.getString("title"),
                 category = json.getString("category"),
@@ -120,13 +119,11 @@ class GuideViewModel : ViewModel() {
                 restTime = json.optInt("restTime", 60)
             )
 
-            db.collection("workouts").document(workoutId)
-                .set(workout)
-                .addOnSuccessListener { onSuccess() }
-                .addOnFailureListener { e -> onError(e.message ?: "Failed to save") }
+            workoutRepository.saveWorkout(workout)
+            onSuccess()
 
         } catch (e: Exception) {
-            onError("Invalid workout format")
+            onError("Invalid workout format: ${e.message}")
         }
     }
 }

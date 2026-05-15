@@ -14,36 +14,112 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.trainwise.ui.theme.*
+import com.example.trainwise.ui.viewmodels.AuthViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SecurityScreen(
     isDarkMode: Boolean,
     onToggleDarkMode: () -> Unit,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    authViewModel: AuthViewModel = viewModel()
 ) {
-    // Dynamic Colors based on Dark Mode state
-    val backgroundColor = MaterialTheme.colorScheme.background
-    val textColor = MaterialTheme.colorScheme.onBackground
-    val cardColor = CardBackground
-    val secondaryTextColor = GrayText
+    var showChangePasswordDialog by remember { mutableStateOf(false) }
+    var newPassword by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(authViewModel.successMessage) {
+        authViewModel.successMessage?.let {
+            snackbarHostState.showSnackbar(it)
+            authViewModel.clearMessages()
+        }
+    }
+
+    LaunchedEffect(authViewModel.errorMessage) {
+        authViewModel.errorMessage?.let {
+            snackbarHostState.showSnackbar(it)
+            authViewModel.clearMessages()
+        }
+    }
+
+    if (showChangePasswordDialog) {
+        AlertDialog(
+            onDismissRequest = { 
+                showChangePasswordDialog = false
+                newPassword = ""
+                confirmPassword = ""
+            },
+            title = { Text("Change Password") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = newPassword,
+                        onValueChange = { newPassword = it },
+                        label = { Text("New Password") },
+                        visualTransformation = PasswordVisualTransformation(),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = confirmPassword,
+                        onValueChange = { confirmPassword = it },
+                        label = { Text("Confirm New Password") },
+                        visualTransformation = PasswordVisualTransformation(),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (newPassword == confirmPassword && newPassword.isNotEmpty()) {
+                            authViewModel.changePassword(newPassword)
+                            showChangePasswordDialog = false
+                            newPassword = ""
+                            confirmPassword = ""
+                        }
+                    },
+                    enabled = newPassword.isNotEmpty() && newPassword == confirmPassword,
+                    colors = ButtonDefaults.buttonColors(containerColor = Orange)
+                ) {
+                    Text("Update")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { 
+                    showChangePasswordDialog = false
+                    newPassword = ""
+                    confirmPassword = ""
+                }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Privacy & Security", color = textColor, fontWeight = FontWeight.Bold) },
+                title = { Text("Privacy & Security", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Outlined.ArrowBack, contentDescription = "Back", tint = textColor)
+                        Icon(Icons.Outlined.ArrowBack, contentDescription = "Back")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = backgroundColor)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onBackground
+                )
             )
         },
-        containerColor = backgroundColor
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         LazyColumn(
             modifier = Modifier
@@ -56,7 +132,7 @@ fun SecurityScreen(
                 Spacer(modifier = Modifier.height(10.dp))
                 Text(
                     "Appearance",
-                    color = secondaryTextColor,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium
                 )
@@ -68,17 +144,14 @@ fun SecurityScreen(
                     subtitle = "Switch between dark and light themes",
                     icon = if (!isDarkMode) Icons.Outlined.LightMode else Icons.Outlined.DarkMode,
                     checked = !isDarkMode,
-                    onCheckedChange = { onToggleDarkMode() },
-                    textColor = textColor,
-                    secondaryTextColor = secondaryTextColor,
-                    cardColor = cardColor
+                    onCheckedChange = { onToggleDarkMode() }
                 )
             }
 
             item {
                 Text(
                     "Security Features",
-                    color = secondaryTextColor,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium,
                     modifier = Modifier.padding(top = 16.dp)
@@ -90,9 +163,7 @@ fun SecurityScreen(
                     title = "Two-Factor Authentication",
                     subtitle = "Add an extra layer of security",
                     icon = Icons.Outlined.VerifiedUser,
-                    textColor = textColor,
-                    secondaryTextColor = secondaryTextColor,
-                    cardColor = cardColor
+                    onClick = { /* Not implemented */ }
                 )
             }
 
@@ -101,16 +172,14 @@ fun SecurityScreen(
                     title = "Change Password",
                     subtitle = "Update your login credentials",
                     icon = Icons.Outlined.Lock,
-                    textColor = textColor,
-                    secondaryTextColor = secondaryTextColor,
-                    cardColor = cardColor
+                    onClick = { showChangePasswordDialog = true }
                 )
             }
 
             item {
                 Text(
                     "Privacy Control",
-                    color = secondaryTextColor,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium,
                     modifier = Modifier.padding(top = 16.dp)
@@ -123,10 +192,7 @@ fun SecurityScreen(
                     subtitle = "Share anonymized data to improve AI",
                     icon = Icons.Outlined.Share,
                     checked = true,
-                    onCheckedChange = { },
-                    textColor = textColor,
-                    secondaryTextColor = secondaryTextColor,
-                    cardColor = cardColor
+                    onCheckedChange = { }
                 )
             }
 
@@ -135,9 +201,7 @@ fun SecurityScreen(
                     title = "Clear Local Cache",
                     subtitle = "Remove offline data and reset app state",
                     icon = Icons.Outlined.DeleteSweep,
-                    textColor = textColor,
-                    secondaryTextColor = secondaryTextColor,
-                    cardColor = cardColor
+                    onClick = { /* Not implemented */ }
                 )
             }
             
@@ -152,14 +216,11 @@ fun SecurityToggleItem(
     subtitle: String,
     icon: ImageVector,
     checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-    textColor: Color,
-    secondaryTextColor: Color,
-    cardColor: Color
+    onCheckedChange: (Boolean) -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = cardColor),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         shape = RoundedCornerShape(16.dp)
     ) {
         Row(
@@ -178,18 +239,28 @@ fun SecurityToggleItem(
             Spacer(modifier = Modifier.width(16.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                Text(title, color = textColor, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                Text(subtitle, color = secondaryTextColor, fontSize = 12.sp)
+                Text(
+                    text = title, 
+                    color = MaterialTheme.colorScheme.onSurface, 
+                    fontSize = 16.sp, 
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = subtitle, 
+                    color = MaterialTheme.colorScheme.onSurfaceVariant, 
+                    fontSize = 12.sp
+                )
             }
 
             Switch(
                 checked = checked,
                 onCheckedChange = onCheckedChange,
                 colors = SwitchDefaults.colors(
-                    checkedThumbColor = White,
+                    checkedThumbColor = Color.White,
                     checkedTrackColor = Orange,
-                    uncheckedThumbColor = GrayText,
-                    uncheckedTrackColor = cardColor.copy(alpha = 0.5f)
+                    uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+                    uncheckedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             )
         }
@@ -201,15 +272,13 @@ fun SecurityActionItem(
     title: String,
     subtitle: String,
     icon: ImageVector,
-    textColor: Color,
-    secondaryTextColor: Color,
-    cardColor: Color
+    onClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { /* No action implemented as requested */ },
-        colors = CardDefaults.cardColors(containerColor = cardColor),
+            .clickable { onClick() },
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         shape = RoundedCornerShape(16.dp)
     ) {
         Row(
@@ -228,11 +297,24 @@ fun SecurityActionItem(
             Spacer(modifier = Modifier.width(16.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                Text(title, color = textColor, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                Text(subtitle, color = secondaryTextColor, fontSize = 12.sp)
+                Text(
+                    text = title, 
+                    color = MaterialTheme.colorScheme.onSurface, 
+                    fontSize = 16.sp, 
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = subtitle, 
+                    color = MaterialTheme.colorScheme.onSurfaceVariant, 
+                    fontSize = 12.sp
+                )
             }
 
-            Icon(Icons.Outlined.ChevronRight, null, tint = secondaryTextColor)
+            Icon(
+                Icons.Outlined.ChevronRight, 
+                null, 
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

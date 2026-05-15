@@ -33,10 +33,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.trainwise.ui.theme.*
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
-import java.io.ByteArrayOutputStream
+import com.example.trainwise.ui.viewmodels.UserViewModel
+import com.example.trainwise.ui.viewmodels.WorkoutViewModel
 
 @Composable
 fun ProfileScreen(
@@ -48,55 +48,25 @@ fun ProfileScreen(
     onNavigateToSecurity: () -> Unit,
     onNavigateToNotifications: () -> Unit,
     onNavigateToTrainingHistory: () -> Unit,
-    onSignOut: () -> Unit
+    onLogout: () -> Unit,
+    viewModel: UserViewModel = viewModel(),
+    workoutViewModel: WorkoutViewModel = viewModel()
 ) {
-    val auth = FirebaseAuth.getInstance()
-    val userId = auth.currentUser?.uid
-    val db = FirebaseFirestore.getInstance()
     val context = LocalContext.current
-
-    var username by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
-    var profileImageBase64 by remember { mutableStateOf<String?>(null) }
+    val userProfile = viewModel.userProfile
     var showImageSourceDialog by remember { mutableStateOf(false) }
+    var showSignOutDialog by remember { mutableStateOf(false) }
     
-    val profileBitmap = remember(profileImageBase64) {
-        if (profileImageBase64 != null) {
+    val completedWorkouts by workoutViewModel.completedWorkouts
+
+    val profileBitmap = remember(userProfile?.profileImage) {
+        userProfile?.profileImage?.let { base64 ->
             try {
-                val decodedString = Base64.decode(profileImageBase64, Base64.DEFAULT)
+                val decodedString = Base64.decode(base64, Base64.DEFAULT)
                 BitmapFactory.decodeByteArray(decodedString, 0, decodedString.size)
             } catch (e: Exception) {
                 null
             }
-        } else null
-    }
-
-    LaunchedEffect(userId) {
-        userId?.let { id ->
-            db.collection("users").document(id).get()
-                .addOnSuccessListener { document ->
-                    if (document.exists()) {
-                        username = document.getString("username") ?: ""
-                        email = document.getString("email") ?: ""
-                        profileImageBase64 = document.getString("profileImage")
-                    }
-                }
-        }
-    }
-
-    fun saveImageToFirestore(bitmap: Bitmap) {
-        val outputStream = ByteArrayOutputStream()
-        // Compress to keep it reasonably small for Firestore
-        bitmap.compress(Bitmap.CompressFormat.JPEG, 60, outputStream)
-        val byteArray = outputStream.toByteArray()
-        val base64 = Base64.encodeToString(byteArray, Base64.DEFAULT)
-        
-        userId?.let { id ->
-            db.collection("users").document(id)
-                .update("profileImage", base64)
-                .addOnSuccessListener {
-                    profileImageBase64 = base64
-                }
         }
     }
 
@@ -104,7 +74,7 @@ fun ProfileScreen(
         contract = ActivityResultContracts.TakePicturePreview()
     ) { bitmap ->
         if (bitmap != null) {
-            saveImageToFirestore(bitmap)
+            viewModel.updateProfileImage(bitmap)
         }
     }
 
@@ -114,12 +84,13 @@ fun ProfileScreen(
         uri?.let {
             try {
                 val bitmap = if (Build.VERSION.SDK_INT < 28) {
+                    @Suppress("DEPRECATION")
                     MediaStore.Images.Media.getBitmap(context.contentResolver, it)
                 } else {
                     val source = ImageDecoder.createSource(context.contentResolver, it)
                     ImageDecoder.decodeBitmap(source)
                 }
-                saveImageToFirestore(bitmap)
+                viewModel.updateProfileImage(bitmap)
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -129,7 +100,7 @@ fun ProfileScreen(
     if (showImageSourceDialog) {
         AlertDialog(
             onDismissRequest = { showImageSourceDialog = false },
-            title = { Text("Select Profile Picture", color = White) },
+            title = { Text("Select Profile Picture") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(
@@ -149,7 +120,7 @@ fun ProfileScreen(
                             galleryLauncher.launch("image/*")
                         },
                         modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = CardBackground)
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                     ) {
                         Icon(Icons.Outlined.PhotoLibrary, null, modifier = Modifier.padding(end = 8.dp))
                         Text("Choose from Gallery")
@@ -159,11 +130,31 @@ fun ProfileScreen(
             confirmButton = {},
             dismissButton = {
                 TextButton(onClick = { showImageSourceDialog = false }) {
-                    Text("Cancel", color = GrayText)
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (showSignOutDialog) {
+        AlertDialog(
+            onDismissRequest = { showSignOutDialog = false },
+            title = { Text("Sign Out") },
+            text = { Text("Are you sure you want to sign out?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showSignOutDialog = false
+                    viewModel.signOut()
+                    onLogout()
+                }) {
+                    Text("Sign Out", color = Color.Red)
                 }
             },
-            containerColor = DarkBackground,
-            shape = RoundedCornerShape(24.dp)
+            dismissButton = {
+                TextButton(onClick = { showSignOutDialog = false }) {
+                    Text("Cancel")
+                }
+            }
         )
     }
 
@@ -177,134 +168,148 @@ fun ProfileScreen(
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            item {
-                Spacer(modifier = Modifier.height(40.dp))
+        if (viewModel.isLoading && userProfile == null) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = Orange)
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(horizontal = 20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                item {
+                    Spacer(modifier = Modifier.height(40.dp))
 
-                Box(
-                    contentAlignment = Alignment.BottomEnd,
-                    modifier = Modifier.clickable { showImageSourceDialog = true }
-                ) {
                     Box(
-                        modifier = Modifier
-                            .size(120.dp)
-                            .clip(CircleShape)
-                            .background(CardBackground)
-                            .border(2.dp, Orange, CircleShape),
-                        contentAlignment = Alignment.Center
+                        contentAlignment = Alignment.BottomEnd,
+                        modifier = Modifier.clickable { showImageSourceDialog = true }
                     ) {
-                        if (profileBitmap != null) {
-                            Image(
-                                bitmap = profileBitmap.asImageBitmap(),
-                                contentDescription = "Profile Picture",
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop
-                            )
-                        } else {
-                            Icon(
-                                Icons.Outlined.Person,
-                                contentDescription = null,
-                                modifier = Modifier.fillMaxSize().padding(20.dp),
-                                tint = GrayText
-                            )
+                        Box(
+                            modifier = Modifier
+                                .size(120.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                .border(2.dp, Orange, CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (profileBitmap != null) {
+                                Image(
+                                    bitmap = profileBitmap.asImageBitmap(),
+                                    contentDescription = "Profile Picture",
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                Icon(
+                                    Icons.Outlined.Person,
+                                    contentDescription = null,
+                                    modifier = Modifier.fillMaxSize().padding(20.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        Surface(
+                            shape = CircleShape,
+                            color = Orange,
+                            modifier = Modifier.size(32.dp).border(2.dp, MaterialTheme.colorScheme.background, CircleShape)
+                        ) {
+                            Icon(Icons.Outlined.PhotoCamera, null, tint = Color.White, modifier = Modifier.padding(6.dp))
                         }
                     }
 
-                    Surface(
-                        shape = CircleShape,
-                        color = Orange,
-                        modifier = Modifier.size(32.dp).border(2.dp, MaterialTheme.colorScheme.background, CircleShape)
-                    ) {
-                        Icon(Icons.Outlined.PhotoCamera, null, tint = White, modifier = Modifier.padding(6.dp))
-                    }
-                }
+                    Spacer(modifier = Modifier.height(16.dp))
 
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Text(username, color = MaterialTheme.colorScheme.onBackground, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                Text(email, color = GrayText, fontSize = 14.sp)
-
-                Spacer(modifier = Modifier.height(30.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    StatCard(
-                        modifier = Modifier.weight(1f).clickable { onNavigateToTrainingHistory() }, 
-                        icon = Icons.Outlined.History, 
-                        value = "24", 
-                        label = "Sessions"
+                    Text(
+                        userProfile?.username ?: "Athlete",
+                        color = MaterialTheme.colorScheme.onBackground,
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold
                     )
-                    StatCard(Modifier.weight(1f), Icons.Outlined.EmojiEvents, "12", "Badges")
-                    StatCard(Modifier.weight(1f), Icons.Outlined.MonitorWeight, "78kg", "Weight")
+                    Text(
+                        userProfile?.email ?: "",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 14.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(30.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        StatCard(
+                            modifier = Modifier.weight(1f).clickable { onNavigateToTrainingHistory() },
+                            icon = Icons.Outlined.History,
+                            value = completedWorkouts.size.toString(),
+                            label = "Sessions"
+                        )
+                        StatCard(Modifier.weight(1f), Icons.Outlined.MonitorWeight, userProfile?.weight?.let { "${it}kg" } ?: "--", "Weight")
+                    }
+
+                    Spacer(modifier = Modifier.height(32.dp))
+
+                    Text(
+                        "Settings",
+                        color = MaterialTheme.colorScheme.onBackground,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
                 }
 
-                Spacer(modifier = Modifier.height(32.dp))
+                item {
+                    ProfileMenuItem(
+                        Icons.Outlined.PersonOutline,
+                        "Account Details",
+                        onClick = onNavigateToAccountDetails
+                    )
+                }
+                item {
+                    ProfileMenuItem(
+                        Icons.Outlined.History,
+                        "Workout History",
+                        onClick = onNavigateToTrainingHistory
+                    )
+                }
+                item {
+                    ProfileMenuItem(
+                        Icons.Outlined.Watch,
+                        "Biometric Devices",
+                        onClick = onNavigateToBiometrics
+                    )
+                }
+                item {
+                    ProfileMenuItem(
+                        Icons.Outlined.Notifications,
+                        "Notifications",
+                        onClick = onNavigateToNotifications
+                    )
+                }
+                item {
+                    ProfileMenuItem(
+                        Icons.Outlined.Shield,
+                        "Privacy & Security",
+                        onClick = onNavigateToSecurity
+                    )
+                }
+                item {
+                    ProfileMenuItem(
+                        Icons.Outlined.Logout,
+                        "Sign Out",
+                        textColor = Color.Red,
+                        iconColor = Color.Red,
+                        onClick = { showSignOutDialog = true }
+                    )
+                }
 
-                Text(
-                    "Settings",
-                    color = MaterialTheme.colorScheme.onBackground,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
+                item { Spacer(modifier = Modifier.height(20.dp)) }
             }
-
-            item { 
-                ProfileMenuItem(
-                    Icons.Outlined.PersonOutline, 
-                    "Account Details",
-                    onClick = onNavigateToAccountDetails
-                ) 
-            }
-            item { 
-                ProfileMenuItem(
-                    Icons.Outlined.History, 
-                    "Training History",
-                    onClick = onNavigateToTrainingHistory
-                ) 
-            }
-            item { 
-                ProfileMenuItem(
-                    Icons.Outlined.Watch, 
-                    "Biometric Devices",
-                    onClick = onNavigateToBiometrics
-                ) 
-            }
-            item { 
-                ProfileMenuItem(
-                    Icons.Outlined.Notifications, 
-                    "Notifications",
-                    onClick = onNavigateToNotifications
-                ) 
-            }
-            item { 
-                ProfileMenuItem(
-                    Icons.Outlined.Shield, 
-                    "Privacy & Security",
-                    onClick = onNavigateToSecurity
-                ) 
-            }
-            item {
-                ProfileMenuItem(
-                    Icons.Outlined.Logout,
-                    "Sign Out",
-                    textColor = Color.Red,
-                    iconColor = Color.Red,
-                    onClick = onSignOut 
-                )
-            }
-
-            item { Spacer(modifier = Modifier.height(20.dp)) }
         }
     }
 }
@@ -328,7 +333,7 @@ private fun StatCardLayout(
 ) {
     Card(
         modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = CardBackground),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         shape = RoundedCornerShape(16.dp)
     ) {
         Column(
@@ -339,8 +344,17 @@ private fun StatCardLayout(
         ) {
             Icon(icon, null, tint = Orange, modifier = Modifier.size(24.dp))
             Spacer(modifier = Modifier.height(8.dp))
-            Text(text = value, color = White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-            Text(text = label, color = GrayText, fontSize = 12.sp)
+            Text(
+                text = value,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = label,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 12.sp
+            )
         }
     }
 }
@@ -349,7 +363,7 @@ private fun StatCardLayout(
 fun ProfileMenuItem(
     icon: ImageVector,
     title: String,
-    textColor: Color = White,
+    textColor: Color = Color.Unspecified,
     iconColor: Color = Orange,
     onClick: () -> Unit = {}
 ) {
@@ -358,7 +372,7 @@ fun ProfileMenuItem(
             .fillMaxWidth()
             .padding(vertical = 6.dp)
             .clickable { onClick() },
-        colors = CardDefaults.cardColors(containerColor = CardBackground),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         shape = RoundedCornerShape(12.dp)
     ) {
         Row(
@@ -367,9 +381,13 @@ fun ProfileMenuItem(
         ) {
             Icon(icon, null, tint = iconColor, modifier = Modifier.size(24.dp))
             Spacer(modifier = Modifier.width(16.dp))
-            Text(text = title, color = if (textColor == White) MaterialTheme.colorScheme.onBackground else textColor, fontSize = 16.sp)
+            Text(
+                text = title,
+                color = if (textColor == Color.Unspecified) MaterialTheme.colorScheme.onSurface else textColor,
+                fontSize = 16.sp
+            )
             Spacer(modifier = Modifier.weight(1f))
-            Icon(Icons.Outlined.ChevronRight, null, tint = GrayText)
+            Icon(Icons.Outlined.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -380,27 +398,48 @@ fun ProfileBottomNavigationBar(
     onWorkoutsClick: () -> Unit,
     onGuideClick: () -> Unit
 ) {
-    NavigationBar(containerColor = Color.Black, contentColor = White) {
+    NavigationBar(
+        containerColor = MaterialTheme.colorScheme.surface,
+        tonalElevation = 8.dp
+    ) {
         NavigationBarItem(
             selected = false,
             onClick = onHomeClick,
             icon = { Icon(Icons.Outlined.Home, null) },
             label = { Text("Home") },
-            colors = NavigationBarItemDefaults.colors(unselectedIconColor = White, unselectedTextColor = White)
+            colors = NavigationBarItemDefaults.colors(
+                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                selectedIconColor = MaterialTheme.colorScheme.primary,
+                selectedTextColor = MaterialTheme.colorScheme.primary,
+                indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+            )
         )
         NavigationBarItem(
             selected = false,
             onClick = onWorkoutsClick,
             icon = { Icon(Icons.Outlined.FitnessCenter, null) },
             label = { Text("Workouts") },
-            colors = NavigationBarItemDefaults.colors(unselectedIconColor = White, unselectedTextColor = White)
+            colors = NavigationBarItemDefaults.colors(
+                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                selectedIconColor = MaterialTheme.colorScheme.primary,
+                selectedTextColor = MaterialTheme.colorScheme.primary,
+                indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+            )
         )
         NavigationBarItem(
             selected = false,
             onClick = onGuideClick,
             icon = { Icon(Icons.Outlined.MenuBook, null) },
             label = { Text("Guide") },
-            colors = NavigationBarItemDefaults.colors(unselectedIconColor = White, unselectedTextColor = White)
+            colors = NavigationBarItemDefaults.colors(
+                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                selectedIconColor = MaterialTheme.colorScheme.primary,
+                selectedTextColor = MaterialTheme.colorScheme.primary,
+                indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+            )
         )
         NavigationBarItem(
             selected = true,
@@ -408,9 +447,11 @@ fun ProfileBottomNavigationBar(
             icon = { Icon(Icons.Outlined.Person, null) },
             label = { Text("Profile") },
             colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = White,
-                indicatorColor = Orange,
-                selectedTextColor = White
+                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                selectedIconColor = MaterialTheme.colorScheme.primary,
+                selectedTextColor = MaterialTheme.colorScheme.primary,
+                indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
             )
         )
     }

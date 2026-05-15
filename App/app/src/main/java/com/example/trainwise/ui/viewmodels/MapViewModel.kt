@@ -7,75 +7,38 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.launch
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
-import com.example.trainwise.network.PlacesApiService
 import com.example.trainwise.data.models.Gym
-import com.example.trainwise.data.models.Review
+import com.example.trainwise.data.repositories.GymRepository
 
-class MapViewModel : ViewModel() {
+class MapViewModel(
+    private val repository: GymRepository = GymRepository()
+) : ViewModel() {
     var gyms by mutableStateOf<List<Gym>>(emptyList())
     var userLocation by mutableStateOf<LatLng?>(null)
     var isLoading by mutableStateOf(false)
     var errorMessage by mutableStateOf<String?>(null)
     
-    // For selected gym details
     var selectedGym by mutableStateOf<Gym?>(null)
-
-    private val retrofit = Retrofit.Builder()
-        .baseUrl("https://maps.googleapis.com/")
-        .addConverterFactory(GsonConverterFactory.create())
-        .build()
-
-    private val apiService = retrofit.create(PlacesApiService::class.java)
 
     fun selectGym(gym: Gym?) {
         selectedGym = gym
     }
 
     fun fetchNearbyGyms(latLng: LatLng, apiKey: String) {
-        Log.d("MapViewModel", "Fetching gyms for: ${latLng.latitude}, ${latLng.longitude}")
         userLocation = latLng
         isLoading = true
         errorMessage = null
         
         viewModelScope.launch {
             try {
-                val response = apiService.getNearbyGyms(
-                    location = "${latLng.latitude},${latLng.longitude}",
-                    apiKey = apiKey,
-                    radius = 5000,
-                    keyword = "gym",
-                    type = "gym"
-                )
-                
-                Log.d("MapViewModel", "API Status: ${response.status}")
-                if (response.status == "OK") {
-                    val fetchedGyms = response.results.map {
-                        val distance = calculateDistance(latLng, LatLng(it.geometry.location.lat, it.geometry.location.lng))
-                        Gym(
-                            id = it.place_id,
-                            name = it.name,
-                            rating = it.rating ?: 0.0,
-                            address = it.vicinity,
-                            location = LatLng(it.geometry.location.lat, it.geometry.location.lng),
-                            distance = distance,
-                            photoReference = it.photos?.firstOrNull()?.photo_reference
-                        )
-                    }
-                    gyms = fetchedGyms.sortedBy { it.distance }
-                } else {
-                    errorMessage = when (response.status) {
-                        "ZERO_RESULTS" -> "No gyms found near you."
-                        "OVER_QUERY_LIMIT" -> "Pay problems"
-                        "REQUEST_DENIED" -> "Error: ${response.error_message ?: "Check your API key permissions"}"
-                        "INVALID_REQUEST" -> "Invalid request"
-                        else -> "Error : ${response.status}"
-                    }
-                }
+                val fetchedGyms = repository.getNearbyGyms(latLng, apiKey)
+                gyms = fetchedGyms.map { gym ->
+                    val distance = calculateDistance(latLng, gym.location)
+                    gym.copy(distance = distance)
+                }.sortedBy { it.distance }
             } catch (e: Exception) {
                 Log.e("MapViewModel", "Error fetching gyms", e)
-                errorMessage = "Error in the net: ${e.localizedMessage}"
+                errorMessage = e.localizedMessage ?: "Error fetching gyms"
             } finally {
                 isLoading = false
             }
@@ -85,25 +48,12 @@ class MapViewModel : ViewModel() {
     fun fetchGymDetails(placeId: String, apiKey: String) {
         viewModelScope.launch {
             try {
-                val response = apiService.getPlaceDetails(placeId, apiKey = apiKey)
-                if (response.status == "OK") {
-                    val googleReviews = response.result.reviews ?: emptyList()
-                    val mappedReviews = googleReviews.map {
-                        Review(
-                            authorName = it.author_name,
-                            rating = it.rating,
-                            text = it.text,
-                            timeAgo = it.relative_time_description,
-                            profilePhotoUrl = it.profile_photo_url
-                        )
-                    }
-                    
-                    selectedGym = selectedGym?.copy(reviews = mappedReviews)
-                    
-                    // Also update the gym in the list if present
-                    gyms = gyms.map {
-                        if (it.id == placeId) it.copy(reviews = mappedReviews) else it
-                    }
+                val reviews = repository.getGymReviews(placeId, apiKey)
+                
+                selectedGym = selectedGym?.copy(reviews = reviews)
+                
+                gyms = gyms.map {
+                    if (it.id == placeId) it.copy(reviews = reviews) else it
                 }
             } catch (e: Exception) {
                 Log.e("MapViewModel", "Error fetching place details", e)

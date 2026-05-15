@@ -21,36 +21,30 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.trainwise.ui.components.CustomTextField
-import com.example.trainwise.ui.theme.DarkBackground
 import com.example.trainwise.ui.theme.Orange
-import com.example.trainwise.ui.theme.White
-import com.google.firebase.auth.FirebaseAuth
+import com.example.trainwise.ui.viewmodels.AuthViewModel
 
 @Composable
-fun LoginScreen(onNavigateToSignUp: () -> Unit, onLoginSuccess: () -> Unit) {
-    val auth = FirebaseAuth.getInstance()
+fun LoginScreen(
+    onNavigateToSignUp: () -> Unit,
+    onLoginSuccess: () -> Unit,
+    viewModel: AuthViewModel = viewModel()
+) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    var showError by remember { mutableStateOf(false) }
 
     val handleLogin = {
         if (email.isNotEmpty() && password.isNotEmpty()) {
-            auth.signInWithEmailAndPassword(email, password)
-                .addOnCompleteListener { task ->
-                    if (task.isSuccessful) {
-                        onLoginSuccess()
-                    } else {
-                        showError = true
-                    }
-                }
+            viewModel.login(email, password, onLoginSuccess)
         }
     }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(DarkBackground)
+            .background(MaterialTheme.colorScheme.background)
             .padding(horizontal = 40.dp, vertical = 60.dp),
         horizontalAlignment = Alignment.Start
     ) {
@@ -59,7 +53,7 @@ fun LoginScreen(onNavigateToSignUp: () -> Unit, onLoginSuccess: () -> Unit) {
         // Welcome Text
         Text(
             text = buildAnnotatedString {
-                withStyle(style = SpanStyle(color = White, fontWeight = FontWeight.Bold, fontSize = 48.sp)) {
+                withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.onBackground, fontWeight = FontWeight.Bold, fontSize = 48.sp)) {
                     append("Welcome to\n")
                 }
                 withStyle(style = SpanStyle(color = Orange, fontWeight = FontWeight.Bold, fontSize = 56.sp)) {
@@ -72,12 +66,12 @@ fun LoginScreen(onNavigateToSignUp: () -> Unit, onLoginSuccess: () -> Unit) {
         Spacer(modifier = Modifier.height(80.dp))
 
         // email Field
-        Text(text = "email", color = White, fontSize = 18.sp, modifier = Modifier.padding(bottom = 8.dp))
+        Text(text = "Email", color = MaterialTheme.colorScheme.onBackground, fontSize = 18.sp, modifier = Modifier.padding(bottom = 8.dp))
         CustomTextField(
             value = email,
             onValueChange = { 
                 email = it
-                showError = false
+                viewModel.clearError()
             },
             placeholder = "Enter email",
             imeAction = ImeAction.Next,
@@ -85,7 +79,7 @@ fun LoginScreen(onNavigateToSignUp: () -> Unit, onLoginSuccess: () -> Unit) {
                 Icon(
                     imageVector = Icons.Outlined.Person,
                     contentDescription = null,
-                    tint = White,
+                    tint = MaterialTheme.colorScheme.onBackground,
                     modifier = Modifier.size(32.dp)
                 )
             }
@@ -94,12 +88,12 @@ fun LoginScreen(onNavigateToSignUp: () -> Unit, onLoginSuccess: () -> Unit) {
         Spacer(modifier = Modifier.height(32.dp))
 
         // Password Field
-        Text(text = "Password", color = White, fontSize = 18.sp, modifier = Modifier.padding(bottom = 8.dp))
+        Text(text = "Password", color = MaterialTheme.colorScheme.onBackground, fontSize = 18.sp, modifier = Modifier.padding(bottom = 8.dp))
         CustomTextField(
             value = password,
             onValueChange = { 
                 password = it
-                showError = false
+                viewModel.clearError()
             },
             placeholder = "Enter password",
             visualTransformation = PasswordVisualTransformation(),
@@ -110,15 +104,15 @@ fun LoginScreen(onNavigateToSignUp: () -> Unit, onLoginSuccess: () -> Unit) {
                 Icon(
                     imageVector = Icons.Outlined.Lock,
                     contentDescription = null,
-                    tint = White,
+                    tint = MaterialTheme.colorScheme.onBackground,
                     modifier = Modifier.size(32.dp)
                 )
             }
         )
 
-        if (showError) {
+        viewModel.errorMessage?.let { error ->
             Text(
-                text = "Invalid email or password",
+                text = error,
                 color = Color.Red,
                 fontSize = 14.sp,
                 modifier = Modifier.padding(top = 8.dp)
@@ -131,10 +125,18 @@ fun LoginScreen(onNavigateToSignUp: () -> Unit, onLoginSuccess: () -> Unit) {
         Button(
             onClick = handleLogin,
             modifier = Modifier.fillMaxWidth().height(70.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Orange),
-            shape = RoundedCornerShape(35.dp)
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Orange,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            ),
+            shape = RoundedCornerShape(35.dp),
+            enabled = !viewModel.isLoading
         ) {
-            Text(text = "LOGIN", color = White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            if (viewModel.isLoading) {
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(24.dp))
+            } else {
+                Text(text = "LOGIN", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            }
         }
 
         Spacer(modifier = Modifier.weight(1f))
@@ -145,7 +147,7 @@ fun LoginScreen(onNavigateToSignUp: () -> Unit, onLoginSuccess: () -> Unit) {
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(text = "New here? ", color = White, fontSize = 16.sp)
+            Text(text = "New here? ", color = MaterialTheme.colorScheme.onBackground, fontSize = 16.sp)
             TextButton(onClick = onNavigateToSignUp, contentPadding = PaddingValues(0.dp)) {
                 Text(text = "Sign up", color = Orange, fontSize = 16.sp, fontWeight = FontWeight.Bold)
             }

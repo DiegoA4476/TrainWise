@@ -139,7 +139,7 @@ fun HomeScreen(
                 }
                 if (viewModel.isLoading) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = Orange)
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                     }
                 }
             }
@@ -153,12 +153,16 @@ fun HomeScreen(
             ) {
                 Text(
                     "Gyms near you",
-                    color = White,
+                    color = MaterialTheme.colorScheme.onBackground,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold
                 )
                 if (viewModel.isLoading) {
-                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = Orange)
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp), 
+                        strokeWidth = 2.dp, 
+                        color = MaterialTheme.colorScheme.primary
+                    )
                 }
             }
 
@@ -173,7 +177,7 @@ fun HomeScreen(
             if (!viewModel.isLoading && viewModel.gyms.isEmpty() && viewModel.errorMessage == null) {
                 Text(
                     "No gyms found near you.",
-                    color = LightGray,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)
                 )
             }
@@ -202,9 +206,9 @@ fun HomeBottomNavigationBar(
     onProfileClick: () -> Unit
 ) {
     NavigationBar(
-        containerColor = Color.Black,
-        contentColor = White,
-        tonalElevation = 0.dp
+        containerColor = MaterialTheme.colorScheme.surface,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        tonalElevation = 8.dp
     ) {
         NavigationBarItem(
             selected = true,
@@ -212,11 +216,11 @@ fun HomeBottomNavigationBar(
             icon = { Icon(Icons.Outlined.Home, null) },
             label = { Text("Home") },
             colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = White,
-                selectedTextColor = White,
-                indicatorColor = Orange,
-                unselectedIconColor = White,
-                unselectedTextColor = White
+                selectedIconColor = MaterialTheme.colorScheme.primary,
+                selectedTextColor = MaterialTheme.colorScheme.primary,
+                indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
             )
         )
         NavigationBarItem(
@@ -225,9 +229,10 @@ fun HomeBottomNavigationBar(
             icon = { Icon(Icons.Outlined.FitnessCenter, null) },
             label = { Text("Workouts") },
             colors = NavigationBarItemDefaults.colors(
-                unselectedIconColor = White,
-                unselectedTextColor = White,
-                indicatorColor = Orange
+                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                selectedIconColor = MaterialTheme.colorScheme.primary,
+                indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
             )
         )
         NavigationBarItem(
@@ -236,9 +241,10 @@ fun HomeBottomNavigationBar(
             icon = { Icon(Icons.Outlined.MenuBook, null) },
             label = { Text("Guide") },
             colors = NavigationBarItemDefaults.colors(
-                unselectedIconColor = White,
-                unselectedTextColor = White,
-                indicatorColor = Orange
+                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                selectedIconColor = MaterialTheme.colorScheme.primary,
+                indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
             )
         )
         NavigationBarItem(
@@ -247,9 +253,10 @@ fun HomeBottomNavigationBar(
             icon = { Icon(Icons.Outlined.Person, null) },
             label = { Text("Profile") },
             colors = NavigationBarItemDefaults.colors(
-                unselectedIconColor = White,
-                unselectedTextColor = White,
-                indicatorColor = Orange
+                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                selectedIconColor = MaterialTheme.colorScheme.primary,
+                indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
             )
         )
     }
@@ -262,7 +269,7 @@ fun GymCard(gym: Gym, onClick: () -> Unit) {
             .fillMaxWidth()
             .padding(vertical = 8.dp)
             .clickable { onClick() },
-        colors = CardDefaults.cardColors(containerColor = CardBackground),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         shape = RoundedCornerShape(16.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -273,17 +280,23 @@ fun GymCard(gym: Gym, onClick: () -> Unit) {
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
                     Surface(
-                        color = Orange.copy(alpha = 0.2f),
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.size(48.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
-                            Icon(Icons.Default.FitnessCenter, null, tint = Orange)
+                            Icon(Icons.Default.FitnessCenter, null, tint = MaterialTheme.colorScheme.primary)
                         }
                     }
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
-                        Text(text = gym.name, color = White, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                        Text(
+                            text = gym.name, 
+                            color = MaterialTheme.colorScheme.onSurface, 
+                            fontSize = 16.sp, 
+                            fontWeight = FontWeight.Bold, 
+                            maxLines = 1
+                        )
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Filled.Star, null, tint = Orange, modifier = Modifier.size(14.dp))
                             val distanceText = if (gym.distance != null) {
@@ -291,7 +304,7 @@ fun GymCard(gym: Gym, onClick: () -> Unit) {
                             } else ""
                             Text(
                                 text = " ${gym.rating} • $distanceText",
-                                color = LightGray,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontSize = 12.sp,
                                 maxLines = 1
                             )
@@ -300,12 +313,12 @@ fun GymCard(gym: Gym, onClick: () -> Unit) {
                 }
                 if (gym.isOpenNow) {
                     Surface(
-                        color = Color(0xFF2C1C14),
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
                         shape = RoundedCornerShape(4.dp)
                     ) {
                         Text(
                             text = "Open",
-                            color = Orange,
+                            color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                             fontSize = 12.sp
                         )
