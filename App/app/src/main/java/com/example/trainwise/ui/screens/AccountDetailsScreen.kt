@@ -10,7 +10,6 @@ import android.util.Base64
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.result.launch
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -340,18 +339,6 @@ fun AccountDetailsScreen(
                 }
 
                 Spacer(modifier = Modifier.height(40.dp))
-
-                Button(
-                    onClick = { /* deactivate logic */ },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-                    border = BorderStroke(1.dp, Color.Red),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text("Deactivate Account", color = Color.Red, modifier = Modifier.padding(vertical = 8.dp))
-                }
-
-                Spacer(modifier = Modifier.height(20.dp))
             }
         }
     }

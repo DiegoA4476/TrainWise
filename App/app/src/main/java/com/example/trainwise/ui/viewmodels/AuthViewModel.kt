@@ -55,19 +55,39 @@ class AuthViewModel(
         }
     }
 
-    fun changePassword(newPassword: String) {
+    fun changePassword(currentPassword: String, newPassword: String) {
         viewModelScope.launch {
             isLoading = true
             errorMessage = null
             successMessage = null
-            val result = repository.changePassword(newPassword)
+            val result = repository.updatePassword(currentPassword, newPassword)
             result.onSuccess {
                 successMessage = "Password updated successfully"
             }.onFailure {
-                errorMessage = it.message ?: "Failed to update password"
+                errorMessage = it.message ?: "Failed to update password. Check your current password."
             }
             isLoading = false
         }
+    }
+
+    fun deleteAccount(password: String, onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            isLoading = true
+            errorMessage = null
+            val result = repository.deleteAccount(password)
+            result.onSuccess {
+                signOut()
+                onSuccess()
+            }.onFailure {
+                errorMessage = it.message ?: "Failed to delete account. Check your password."
+            }
+            isLoading = false
+        }
+    }
+
+    fun signOut() {
+        repository.signOut()
+        currentUser = null
     }
 
     fun clearError() {

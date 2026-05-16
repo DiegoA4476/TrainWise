@@ -73,6 +73,7 @@ fun AppNavigation(
                 onNavigateToNotifications = { navController.navigate("notifications") },
                 onNavigateToTrainingHistory = { navController.navigate("workout_history") },
                 onLogout = {
+                    authViewModel.signOut()
                     navController.navigate("login") {
                         popUpTo(0) { inclusive = true }
                     }
@@ -104,7 +105,13 @@ fun AppNavigation(
             SecurityScreen(
                 isDarkMode = isDarkMode,
                 onToggleDarkMode = onToggleDarkMode,
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popBackStack() },
+                onAccountDeleted = {
+                    navController.navigate("login") {
+                        popUpTo(0) { inclusive = true }
+                    }
+                },
+                authViewModel = authViewModel
             )
         }
         composable("notifications") {

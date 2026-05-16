@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.trainwise.ui.theme.*
 import com.example.trainwise.ui.viewmodels.AuthViewModel
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -27,48 +28,51 @@ fun SecurityScreen(
     isDarkMode: Boolean,
     onToggleDarkMode: () -> Unit,
     onNavigateBack: () -> Unit,
+    onAccountDeleted: () -> Unit,
     authViewModel: AuthViewModel = viewModel()
 ) {
-    var showChangePasswordDialog by remember { mutableStateOf(false) }
+    var showPasswordDialog by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    
+    var currentPassword by remember { mutableStateOf("") }
     var newPassword by remember { mutableStateOf("") }
-    var confirmPassword by remember { mutableStateOf("") }
+    var deletePassword by remember { mutableStateOf("") }
+    
+    val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    LaunchedEffect(authViewModel.successMessage) {
+    LaunchedEffect(authViewModel.successMessage, authViewModel.errorMessage) {
         authViewModel.successMessage?.let {
             snackbarHostState.showSnackbar(it)
             authViewModel.clearMessages()
         }
-    }
-
-    LaunchedEffect(authViewModel.errorMessage) {
         authViewModel.errorMessage?.let {
             snackbarHostState.showSnackbar(it)
             authViewModel.clearMessages()
         }
     }
 
-    if (showChangePasswordDialog) {
+    if (showPasswordDialog) {
         AlertDialog(
             onDismissRequest = { 
-                showChangePasswordDialog = false
+                showPasswordDialog = false
+                currentPassword = ""
                 newPassword = ""
-                confirmPassword = ""
             },
-            title = { Text("Change Password") },
+            title = { Text(("Change Password")) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
-                        value = newPassword,
-                        onValueChange = { newPassword = it },
-                        label = { Text("New Password") },
+                        value = currentPassword,
+                        onValueChange = { currentPassword = it },
+                        label = { Text("Current Password") },
                         visualTransformation = PasswordVisualTransformation(),
                         modifier = Modifier.fillMaxWidth()
                     )
                     OutlinedTextField(
-                        value = confirmPassword,
-                        onValueChange = { confirmPassword = it },
-                        label = { Text("Confirm New Password") },
+                        value = newPassword,
+                        onValueChange = { newPassword = it },
+                        label = { Text("New Password") },
                         visualTransformation = PasswordVisualTransformation(),
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -77,27 +81,61 @@ fun SecurityScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        if (newPassword == confirmPassword && newPassword.isNotEmpty()) {
-                            authViewModel.changePassword(newPassword)
-                            showChangePasswordDialog = false
-                            newPassword = ""
-                            confirmPassword = ""
-                        }
+                        authViewModel.changePassword(currentPassword, newPassword)
+                        showPasswordDialog = false
+                        currentPassword = ""
+                        newPassword = ""
                     },
-                    enabled = newPassword.isNotEmpty() && newPassword == confirmPassword,
+                    enabled = newPassword.length >= 6 && currentPassword.isNotEmpty(),
                     colors = ButtonDefaults.buttonColors(containerColor = Orange)
-                ) {
-                    Text("Update")
-                }
+                ) { Text("Update") }
             },
             dismissButton = {
                 TextButton(onClick = { 
-                    showChangePasswordDialog = false
+                    showPasswordDialog = false
+                    currentPassword = ""
                     newPassword = ""
-                    confirmPassword = ""
-                }) {
-                    Text("Cancel")
+                }) { Text("Cancel") }
+            }
+        )
+    }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { 
+                showDeleteDialog = false
+                deletePassword = ""
+            },
+            title = { Text("Delete account", color = Color.Red) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("To confirm deletion, please enter your current password. This will permanently delete your account and all data.")
+                    OutlinedTextField(
+                        value = deletePassword,
+                        onValueChange = { deletePassword = it },
+                        label = { Text("Confirm password") },
+                        visualTransformation = PasswordVisualTransformation(),
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
+            },
+            confirmButton = {
+                Button(
+                    onClick = { 
+                        authViewModel.deleteAccount(deletePassword) {
+                            onAccountDeleted()
+                        }
+                        showDeleteDialog = false
+                    },
+                    enabled = deletePassword.isNotEmpty(),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
+                ) { Text("Delete") }
+            },
+            dismissButton = {
+                TextButton(onClick = { 
+                    showDeleteDialog = false
+                    deletePassword = ""
+                }) { Text("Cancel") }
             }
         )
     }
@@ -108,106 +146,89 @@ fun SecurityScreen(
                 title = { Text("Privacy & Security", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Outlined.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.Outlined.ArrowBack, "Back")
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                    titleContentColor = MaterialTheme.colorScheme.onBackground,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onBackground
-                )
+                }
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            item {
-                Spacer(modifier = Modifier.height(10.dp))
-                Text(
-                    "Appearance",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium
-                )
-            }
+            item { Spacer(modifier = Modifier.height(8.dp)) }
 
             item {
+                SectionLabel("Preferences")
                 SecurityToggleItem(
                     title = "Light Mode",
                     subtitle = "Switch between dark and light themes",
-                    icon = if (!isDarkMode) Icons.Outlined.LightMode else Icons.Outlined.DarkMode,
-                    checked = !isDarkMode,
+                    icon = if (isDarkMode) Icons.Outlined.DarkMode else Icons.Outlined.LightMode,
+                    checked = isDarkMode,
                     onCheckedChange = { onToggleDarkMode() }
                 )
-            }
-
-            item {
-                Text(
-                    "Security Features",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier.padding(top = 16.dp)
-                )
-            }
-
-            item {
+                
+                Spacer(modifier = Modifier.height(12.dp))
+                
                 SecurityActionItem(
-                    title = "Two-Factor Authentication",
-                    subtitle = "Add an extra layer of security",
-                    icon = Icons.Outlined.VerifiedUser,
-                    onClick = { /* Not implemented */ }
+                    title = "Language",
+                    subtitle = "English (Coming soon: Portuguese)",
+                    icon = Icons.Outlined.Language,
+                    onClick = {
+                        scope.launch {
+                            snackbarHostState.showSnackbar("Language selection will be available in a future update!")
+                        }
+                    }
                 )
             }
 
             item {
+                SectionLabel("Security Features")
                 SecurityActionItem(
                     title = "Change Password",
                     subtitle = "Update your login credentials",
                     icon = Icons.Outlined.Lock,
-                    onClick = { showChangePasswordDialog = true }
+                    onClick = { showPasswordDialog = true }
                 )
             }
 
             item {
-                Text(
-                    "Privacy Control",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier.padding(top = 16.dp)
-                )
-            }
-
-            item {
-                SecurityToggleItem(
-                    title = "Data Sharing",
-                    subtitle = "Share anonymized data to improve AI",
-                    icon = Icons.Outlined.Share,
-                    checked = true,
-                    onCheckedChange = { }
-                )
-            }
-
-            item {
-                SecurityActionItem(
-                    title = "Clear Local Cache",
-                    subtitle = "Remove offline data and reset app state",
-                    icon = Icons.Outlined.DeleteSweep,
-                    onClick = { /* Not implemented */ }
-                )
+                SectionLabel("Danger zone")
+                Card(
+                    modifier = Modifier.fillMaxWidth().clickable { showDeleteDialog = true },
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    ),
+                    shape = RoundedCornerShape(16.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color.Red.copy(alpha = 0.2f))
+                ) {
+                    Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Outlined.DeleteForever, null, tint = Color.Red)
+                        Spacer(Modifier.width(16.dp))
+                        Column {
+                            Text("Delete account", color = Color.Red, fontWeight = FontWeight.Bold)
+                            Text("Delete all the information of the user", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                        }
+                    }
+                }
             }
             
-            item { Spacer(modifier = Modifier.height(20.dp)) }
+            item { Spacer(modifier = Modifier.height(40.dp)) }
         }
     }
+}
+
+@Composable
+fun SectionLabel(text: String) {
+    Text(
+        text = text,
+        color = Orange,
+        fontSize = 13.sp,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.padding(start = 4.dp, top = 8.dp, bottom = 4.dp)
+    )
 }
 
 @Composable
@@ -223,45 +244,19 @@ fun SecurityToggleItem(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         shape = RoundedCornerShape(16.dp)
     ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .background(Orange.copy(alpha = 0.1f), RoundedCornerShape(8.dp)),
-                contentAlignment = Alignment.Center
-            ) {
+        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(40.dp).background(Orange.copy(alpha = 0.1f), RoundedCornerShape(8.dp)), Alignment.Center) {
                 Icon(icon, null, tint = Orange, modifier = Modifier.size(24.dp))
             }
-
-            Spacer(modifier = Modifier.width(16.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = title, 
-                    color = MaterialTheme.colorScheme.onSurface, 
-                    fontSize = 16.sp, 
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = subtitle, 
-                    color = MaterialTheme.colorScheme.onSurfaceVariant, 
-                    fontSize = 12.sp
-                )
+            Spacer(Modifier.width(16.dp))
+            Column(Modifier.weight(1f)) {
+                Text(title, fontWeight = FontWeight.Bold)
+                Text(subtitle, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
             }
-
             Switch(
-                checked = checked,
+                checked = checked, 
                 onCheckedChange = onCheckedChange,
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = Color.White,
-                    checkedTrackColor = Orange,
-                    uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant,
-                    uncheckedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                colors = SwitchDefaults.colors(checkedTrackColor = Orange)
             )
         }
     }
@@ -275,46 +270,20 @@ fun SecurityActionItem(
     onClick: () -> Unit
 ) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() },
+        modifier = Modifier.fillMaxWidth().clickable { onClick() },
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         shape = RoundedCornerShape(16.dp)
     ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .background(Orange.copy(alpha = 0.1f), RoundedCornerShape(8.dp)),
-                contentAlignment = Alignment.Center
-            ) {
+        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(40.dp).background(Orange.copy(alpha = 0.1f), RoundedCornerShape(8.dp)), Alignment.Center) {
                 Icon(icon, null, tint = Orange, modifier = Modifier.size(24.dp))
             }
-
-            Spacer(modifier = Modifier.width(16.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = title, 
-                    color = MaterialTheme.colorScheme.onSurface, 
-                    fontSize = 16.sp, 
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = subtitle, 
-                    color = MaterialTheme.colorScheme.onSurfaceVariant, 
-                    fontSize = 12.sp
-                )
+            Spacer(Modifier.width(16.dp))
+            Column(Modifier.weight(1f)) {
+                Text(title, fontWeight = FontWeight.Bold)
+                Text(subtitle, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
             }
-
-            Icon(
-                Icons.Outlined.ChevronRight, 
-                null, 
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Icon(Icons.Outlined.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
