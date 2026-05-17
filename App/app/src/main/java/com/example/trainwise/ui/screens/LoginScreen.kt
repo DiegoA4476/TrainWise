@@ -57,7 +57,7 @@ fun LoginScreen(
                     append("Welcome to\n")
                 }
                 withStyle(style = SpanStyle(color = Orange, fontWeight = FontWeight.Bold, fontSize = 56.sp)) {
-                    append("WiseTrain")
+                    append("TrainWise")
                 }
             },
             lineHeight = 56.sp
